@@ -5,9 +5,11 @@
 "|_|_| |_|_|\__| \_/ |_|_| |_| |_|
                                  
 let mapleader = "t"
-
+set background=dark    
 syntax on
-colorscheme torte
+colorscheme gruvbox
+syn match Braces display '[:={}()\[\]]'
+hi Braces guifg=blue
 filetype on                                
 set ma
 set hidden
@@ -47,6 +49,17 @@ hi DiffDelete ctermfg=132 ctermbg=235
 "hi DiffText ctermfg=  ctermbg=None
 set diffopt=internal,filler,vertical,context:5,foldcolumn:1,indent-heuristic,algorithm:patience
 
+highlight QuickScopePrimary guifg='#afff5f' gui=underline ctermfg=155 cterm=underline
+highlight QuickScopeSecondary guifg='#5fffff' gui=underline ctermfg=81 cterm=underline
+
+let g:deoplete#enable_at_startup = 1
+"
+"" deoplete tab-complete
+"inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
+"
+inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+
 augroup aug_color_scheme
     au!
 
@@ -58,6 +71,11 @@ function s:PatchColorScheme()
     hi! clear DiffChange
     hi! DiffText term=None ctermfg=215 ctermbg=233 cterm=NONE
 endfunction
+
+function! FirstFunction()
+    echom "First Vim function!"
+endfunction
+
 
 "
 "
@@ -93,6 +111,7 @@ nnoremap <C-Space> f cw
 nnoremap <leader>> <C-w>v<C-w>60>
 map <F6> :setlocal spell! spelllang=en_us<cr>
 nnoremap <silent> <S-F1> :Files<cr>
+nnoremap <F2> :Buffers<cr>
 nnoremap <silent> <F1> :Helptags<cr>
 imap <c-x><c-f> <plug>(fzf-complete-path)
 
@@ -102,13 +121,13 @@ imap <c-x><c-f> <plug>(fzf-complete-path)
 "| |__| (_) | |___ 
 " \____\___/ \____|
 "
-inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
-inoremap <silent><expr> <TAB>
-      \ pumvisible() ? "\<C-n>" :
-      \ <SID>check_back_space() ? "\<TAB>" :
-      \ coc#refresh()
-inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+"inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+"inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+"inoremap <silent><expr> <TAB>
+"      \ pumvisible() ? "\<C-n>" :
+"      \ <SID>check_back_space() ? "\<TAB>" :
+"      \ coc#refresh()
+"inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
 
 if exists('*complete_info')
   inoremap <expr> <cr> complete_info()["selected"] != "-1" ? "\<C-y>" : "\<C-g>u\<CR>"
@@ -158,10 +177,9 @@ nnoremap <F6>  l
 nnoremap <F4>  j
 nnoremap <F5>  k
 nnoremap <F10> h
-nnoremap <leader>$ :bn<cr>
-nnoremap <leader>0 :bp<cr>
 nnoremap <leader>b :checkhealth<cr>
 nnoremap <leader>C :CocInfo<cr>
+nnoremap <M-r> :CocRestart<cr>
 nnoremap <leader>i :CocInstall
 nnoremap <leader>d :g/^$/d<cr>
 map <leader>n :cnext<cr>
@@ -176,15 +194,18 @@ tnoremap <A-k> <C-\><C-N><C-w>k
 tnoremap <A-l> <C-\><C-N><C-w>l
 nnoremap <F3> :w!<cr>
 nnoremap <F3> :w!<cr>
-"nnoremap <S-F1> :VimBeGood<cr>
+nnoremap <leader>V :VimBeGood<cr>
+
+let g:kitty_navigator_no_mappings = 1
+
+nnoremap <silent> <M-F10> :KittyNavigateLeft<cr>
+nnoremap <silent> <M-F4> :KittyNavigateDown<cr>
+nnoremap <silent> <M-F5> :KittyNavigateUp<cr>
+nnoremap <silent> <M-F6> :KittyNavigateRight<cr>
 
 nnoremap Q :q!<cr>
 nnoremap <F9> :set hlsearch!<cr> 
 
-augroup torte
-autocmd ColorScheme * highlight QuickScopePrimary guifg='#afff5f' gui=underline ctermfg=155 cterm=underline
-autocmd ColorScheme * highlight QuickScopeSecondary guifg='#5fffff' gui=underline ctermfg=81 cterm=underline
-augroup END
 "
 "Headers
 iabbrev bh #!/bin/bash
@@ -210,6 +231,9 @@ tnoremap <C-t> <C-\><C-n>:q!<cr>
 filetype plugin on
 
 call plug#begin()
+Plug 'knubie/vim-kitty-navigator'
+"Plug 'ternjs/tern_for_vimWatch'
+Plug 'flazz/vim-colorschemes'
 Plug 'uarun/vim-protobuf'
 Plug 'rhysd/git-messenger.vim'
 Plug 'dhruvasagar/vim-table-mode'
@@ -222,7 +246,7 @@ Plug 'luochen1990/rainbow'
 Plug 'jalvesaq/Nvim-R'
 Plug 'plasticboy/vim-markdown'
 Plug 'lervag/vimtex'
-Plug 'xuhdev/vim-latex-live-preview'
+"Plug 'xuhdev/vim-latex-live-preview'
 Plug 'edkolev/tmuxline.vim'
 Plug 'terryma/vim-multiple-cursors'
 Plug 'vimwiki/vimwiki'
@@ -235,7 +259,7 @@ Plug 'BurntSushi/ripgrep'
 Plug 'kien/ctrlp.vim'
 Plug 'majutsushi/tagbar'
 Plug 'roxma/nvim-yarp'
-"Plug 'SirVer/ultisnips'
+Plug 'SirVer/ultisnips'
 Plug 'preservim/nerdtree'
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
@@ -245,7 +269,7 @@ Plug 'jiangmiao/auto-pairs'
 Plug 'mattn/emmet-vim'
 Plug 'mattn/webapi-vim'
 Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
-"Plug 'AndrewRadev/splitjoin.vim'
+Plug 'AndrewRadev/splitjoin.vim'
 Plug 'unblevable/quick-scope'       
 Plug 'jceb/vim-orgmode'
 call plug#end() 
@@ -309,6 +333,7 @@ autocmd FileType go inoremap fos fmt.Sprintf()<space><esc>T(i
 autocmd FileType go inoremap foe fmt.Errorf()<space><esc>T(i
 autocmd FileType go inoremap toe t.Error()<space><esc>T(i
 autocmd FileType go inoremap .. :=
+autocmd FileType go inoremap :imp import
 autocmd FileType go inoremap :b []byte0
 autocmd FileType go inoremap :4 for i := ; i ; i {}<esc>i<cr><esc>k0f;i
 autocmd FileType go inoremap :sw switch {}<esc>i<cr><esc>Ocase:<esc>Fea
@@ -338,6 +363,7 @@ autocmd FileType go inoremap  func (b By--) Len() int {return len(b)}<cr>func (
 autocmd FileType go inoremap <F15> if err != nil{}<esc>i<cr><esc>Ofmt.Println(err)<esc>
 autocmd FileType go inoremap :wait var wg sync.WaitGroup<cr>wg.Add()<cr>wg.Done()<cr>wg.Wait()
 autocmd FileType go inoremap :mut var mu sync.Mutex<cr>mu.Lock()<cr>mu.Unlock()
+autocmd FileType go inoremap <M-R> return
 autocmd FileType go inoremap <Right> string
 autocmd FileType go inoremap <Left> int
 autocmd FileType go inoremap <Up> []byte()<esc>i
@@ -354,7 +380,7 @@ autocmd FileType go inoremap  (t *testing.T) {<cr>}esc>O
 autocmd FileType go inoremap  (b *testing.B) {<cr>}<esc>Ofor i:=0; i<b.N; i++
 autocmd FileType go inoremap <F5> chan 
 autocmd FileType go inoremap <F6> ctx := context.Background()
-autocmd FileType go nnoremap <F11> :GoDoc<cr>
+autocmd FileType go nnoremap <M-!> :GoDoc<cr>
 autocmd FileType go nnoremap <F12> :GoInfo<cr>
 autocmd FileType go nnoremap <F19> :GoPlay<cr>
 autocmd FileType go nnoremap  <Left> ]]
@@ -362,8 +388,8 @@ autocmd FileType go nnoremap <Right> [[
 autocmd FileType go nnoremap <F16> :GoAlternate<cr>
 autocmd FileType go nnoremap <M-f> daf
 autocmd FileType go nnoremap <M-F> dif
-autocmd FileType go nnoremap <F18>:go tool! cover -html=c.out
-autocmd FileType go inoremap <S-F7> f<esc> :GoFillStruct<cr>
+autocmd FileType go nnoremap <F18> :go tool! cover -html=c.out
+autocmd FileType go inoremap <S-F7> <esc> :GoFillStruct<cr>
 autocmd FileType go nnoremap <F7> res, err := http.Get()<cr>if err != nil{<cr>}<esc>Olog.Fatal(err)
 map <leader>G :GoTestFunc<cr>
 "let g:go_auto_sameids = 1
@@ -509,8 +535,6 @@ let g:asyncomplete_auto_popup = 1
 let g:ctrlp_map = '<c-p>'
 let g:ctrlp_cmd = 'CtrlP'
 let g:ctrlp_working_path_mode = 'ra'
-
-let g:deoplete#enable_at_startup = 1
 
 
 highlight Pmenu ctermbg=234 
