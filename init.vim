@@ -3,11 +3,13 @@
 "| | '_ \| | __\ \ / / | '_ ` _ \ 
 "| | | | | | |_ \ V /| | | | | | |
 "|_|_| |_|_|\__| \_/ |_|_| |_| |_|
-                                 
+
+
+"let $NVIM_TUI_ENABLE_TRUE_COLOR=1                               
 let mapleader = "t"
 set background=dark    
 syntax on
-colorscheme gruvbox
+colorscheme gruvy
 syn match Braces display '[:={}()\[\]]'
 hi Braces guifg=blue
 filetype on                                
@@ -52,25 +54,23 @@ set diffopt=internal,filler,vertical,context:5,foldcolumn:1,indent-heuristic,alg
 highlight QuickScopePrimary guifg='#afff5f' gui=underline ctermfg=155 cterm=underline
 highlight QuickScopeSecondary guifg='#5fffff' gui=underline ctermfg=81 cterm=underline
 
-let g:deoplete#enable_at_startup = 1
-"
-"" deoplete tab-complete
-"inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
-"
+let g:vimwiki_table_mappings = 0
+
 inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 
-augroup aug_color_scheme
-    au!
+let g:coc_snippet_next = '<tab>'
+"augroup aug_color_scheme
+"    au!
+"
+"autocmd ColorScheme gruvy call s:PatchColorScheme()
+"augroup END
 
-autocmd ColorScheme gruvy call s:PatchColorScheme()
-augroup END
-
-function s:PatchColorScheme()
-    hi! link DiffChange NONE
-    hi! clear DiffChange
-    hi! DiffText term=None ctermfg=215 ctermbg=233 cterm=NONE
-endfunction
+"function s:PatchColorScheme()
+"    hi! link DiffChange NONE
+"    hi! clear DiffChange
+"    hi! DiffText term=None ctermfg=215 ctermbg=233 cterm=NONE
+"endfunction
 
 function! FirstFunction()
     echom "First Vim function!"
@@ -80,6 +80,8 @@ endfunction
 "
 "
 "Modifying .VIMRC
+nnoremap <leader>t :TableModeEnable<cr>
+nnoremap <leader>d :TableModeDisable<cr>
 nnoremap <M-(> ci(
 nnoremap <M-{> ci{
 nnoremap <M-"> ci"
@@ -96,9 +98,15 @@ nnoremap <leader>1 :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr
 nnoremap <leader>m :vsplit term://cmus<cr>
 nnoremap <leader>o :set ma<cr>
 nnoremap <leader><F2> :split term://cmus<cr>
-nnoremap <leader>t :vsplit term://glances<cr>:set number!<cr>:set relativenumber!<cr>
 nnoremap <leader>r <C-w>la<esc>k<cr><C-\><C-n><C-w>h<esc>
-nnoremap <leader>  :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
+nnoremap <leader>  :FloatermNew<cr>
+nnoremap <leader>tf :FloatermNew fzf<cr>
+nnoremap <leader>tg :FloatermNew gomacro<cr>
+nnoremap <leader>tl :FloatermNew lf<cr>
+nnoremap <leader>tc :CocList floaterm<cr>
+nnoremap <leader>td :Denite floaterm<cr>
+nnoremap <leader>h :SemanticHighlightToggle<cr>
+nnoremap <leader><Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader><C-Space> :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader><Right>  :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader>z :split term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:
@@ -181,7 +189,7 @@ nnoremap <leader>b :checkhealth<cr>
 nnoremap <leader>C :CocInfo<cr>
 nnoremap <M-r> :CocRestart<cr>
 nnoremap <leader>i :CocInstall
-nnoremap <leader>d :g/^$/d<cr>
+"nnoremap <leader>d :g/^$/d<cr>
 map <leader>n :cnext<cr>
 map <leader>N :cprevious<cr>
 noremap <leader>g :GitMessenger<cr>
@@ -192,7 +200,6 @@ tnoremap <A-h> <C-\><C-N><C-w>h
 tnoremap <A-j> <C-\><C-N><C-w>j
 tnoremap <A-k> <C-\><C-N><C-w>k 
 tnoremap <A-l> <C-\><C-N><C-w>l
-nnoremap <F3> :w!<cr>
 nnoremap <F3> :w!<cr>
 nnoremap <leader>V :VimBeGood<cr>
 
@@ -217,7 +224,7 @@ iabbrev gv #Global Variables
 iabbrev fs #Functions
 iabbrev qt /* vim: set filetype=tex : */
 iabbrev \l {\Latex}
-iabbrev :4 for(i=;i ;i )<Esc>F=a
+"iabbrev :4 for(i=;i ;i )<Esc>F=a
 iabbrev rf func recurse (i int)int{}<esc>i<cr><esc>Ototal=1<esc>ofor ; i>0; i--{}<esc>i<cr>total=i<esc>2jareturn total<esc>2kF=i
 iabbrev gogo // 2>/dev/null;/usr/bin/go run $0 $@; exit $?
 
@@ -231,6 +238,11 @@ tnoremap <C-t> <C-\><C-n>:q!<cr>
 filetype plugin on
 
 call plug#begin()
+Plug 'jaxbot/semantic-highlight.vim'
+Plug 'voldikss/vim-floaterm'
+Plug 'Valloric/vim-operator-highlight'
+Plug 'jacoborus/tender.vim'
+Plug 'ryanoasis/vim-devicons'
 Plug 'knubie/vim-kitty-navigator'
 "Plug 'ternjs/tern_for_vimWatch'
 Plug 'flazz/vim-colorschemes'
@@ -256,7 +268,6 @@ Plug 'ncm2/ncm2-path'
 Plug 'Shougo/neocomplete.vim'
 Plug 'tpope/vim-fugitive'
 Plug 'BurntSushi/ripgrep'
-Plug 'kien/ctrlp.vim'
 Plug 'majutsushi/tagbar'
 Plug 'roxma/nvim-yarp'
 Plug 'SirVer/ultisnips'
@@ -335,7 +346,7 @@ autocmd FileType go inoremap toe t.Error()<space><esc>T(i
 autocmd FileType go inoremap .. :=
 autocmd FileType go inoremap :imp import
 autocmd FileType go inoremap :b []byte0
-autocmd FileType go inoremap :4 for i := ; i ; i {}<esc>i<cr><esc>k0f;i
+autocmd FileType go inoremap :for for i := ; i ; i {}<esc>i<cr><esc>k0f;i
 autocmd FileType go inoremap :sw switch {}<esc>i<cr><esc>Ocase:<esc>Fea
 autocmd FileType go inoremap :case case ():<esc>F)i
 autocmd FileType go inoremap :ar x := []{}<esc>F{i
@@ -348,8 +359,8 @@ autocmd FileType go inoremap :gar var x = []{}<esc>F{i
 autocmd FileType go inoremap :add x = append(x,)<esc>0fx
 autocmd FileType go inoremap :append x = append(x,...)<esc>0fx
 autocmd FileType go inoremap :del x = append([:],[:]...)<esc>0f:
-autocmd FileType go inoremap :amap m[]=[]type{}<esc>0f[a
-autocmd FileType go inoremap :map m := map[]type{}<esc>i<cr><esc>O:<esc>i"key"<esc>f:a[]type{}<esc>k0ft
+autocmd FileType go inoremap :amap m[]=type{}<esc>0f[a
+autocmd FileType go inoremap :map m := make(map[type]type)
 autocmd FileType go inoremap :dmap delete(m,key)<esc>Fk
 autocmd FileType go inoremap :s type name struct{}<esc>i<cr><esc>Ofield type<esc>kFn
 autocmd FileType go inoremap :i type name interface{}<esc>i<cr><esc>Omethod<esc>kFm
@@ -452,7 +463,7 @@ autocmd FileType css inoremap :fv font-variant:;<esc>i
 let @f = 'i() {function}b'
 let @p = 'cwprintln!("");hh'
 let @r = 'a$()ýaci(varýabcwýa'
-let g:airline_theme='tomorrow'
+let g:airline_theme='distinguished'
 let g:airline_powerline_fonts = 1
 let g:airline#extensions#tabline#enabled = 1
 " _         _____         
@@ -532,12 +543,9 @@ let g:tex_conceal = ''
 
 let g:asyncomplete_auto_popup = 1
 
-let g:ctrlp_map = '<c-p>'
-let g:ctrlp_cmd = 'CtrlP'
-let g:ctrlp_working_path_mode = 'ra'
-
 
 highlight Pmenu ctermbg=234 
+highlight Pmenu ctermfg=15 
 
 nmap <C-n> :NERDTreeToggle<CR>
 "autocmd VimEnter * NERDTree | wincmd p
@@ -548,7 +556,7 @@ endif
 
 let g:highlightedyank_highlight_duration = 100
 "let g:airline_symbols
-"let g:airline_theme='gruvbox'
+"let g:airline_theme='distinguished'
 let g:airline_powerline_fonts = 1
 "let g:airline#extensions#cursormode#enabled = 1
 let g:cursormode_mode_func = 'mode'

@@ -46,7 +46,7 @@ hi Cursor     ctermfg=Black	ctermbg=Green	cterm=bold
 hi Special    ctermfg=166 
 hi Comment    ctermfg=241
 hi StatusLine ctermfg=166	ctermbg=NONE
-hi String     ctermfg=106
+hi String     ctermfg=yellow
 hi Statement  ctermfg=167			cterm=bold
 hi PreConit   ctermfg=166
 hi Type       ctermfg=214   cterm=bold
@@ -56,6 +56,7 @@ hi Pmenu      ctermfg=223 ctermbg=234
 "hi goDeclaration 
 "hi goDeclType 
 "hi goBuiltins 
+hi goVariable ctermbg=208
 "hi Boolean
 "hi CTagsClass
 "hi CTagsGlobalConstant
@@ -94,7 +95,7 @@ hi Identifier ctermfg=108
 hi Keyword ctermfg=167
 "hi Label
 "hi LineNr
-"hi LocalVariable
+hi LocalVariable ctermfg=208
 "hi Macro
 "hi MatchParen
 "hi ModeMsg
