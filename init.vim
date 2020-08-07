@@ -56,6 +56,8 @@ highlight QuickScopeSecondary guifg='#5fffff' gui=underline ctermfg=81 cterm=und
 
 let g:vimwiki_table_mappings = 0
 
+let g:semanticTermColors = [28,9,13,49,89,190,118,7,45,57,129,208,46,13,14,15,159,125,124,249]
+
 inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 
@@ -82,6 +84,8 @@ endfunction
 "Modifying .VIMRC
 nnoremap <leader>t :TableModeEnable<cr>
 nnoremap <leader>d :TableModeDisable<cr>
+nnoremap <M-Up> :bn<cr>
+nnoremap <M-Down> :bp<cr>
 nnoremap <M-(> ci(
 nnoremap <M-{> ci{
 nnoremap <M-"> ci"
@@ -90,7 +94,7 @@ nnoremap <leader>a :help airline-configuration<cr>
 nnoremap <leader>B :split $HOME/.zshrc<cr>
 nnoremap <leader>e :split $HOME/.config/nvim/init.vim<cr>
 nnoremap <leader>E :vsplit $HOME/.config/nvim/init.vim<cr>
-nnoremap <leader>s :source $HOME/.config/nvim/init.vim<cr>
+nnoremap  :source $HOME/.config/nvim/init.vim<cr>
 nnoremap <leader>q :term://gtop<cr>:set number!<cr>:set relativenumber!<cr>:vsplit term://glances<cr>:set number!<cr>:set relativenumber!<cr>
 nnoremap <leader>3 :vsplit term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:split term://zsh<cr>:split term://cmus<cr><esc><C-w>h<C-w>h
 nnoremap <F12> :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>:vsplit term://tty-clock -c<cr>:split term://cmus<cr>:split term://calcurse<cr><C-W>h<C-W>h
@@ -105,8 +109,8 @@ nnoremap <leader>tg :FloatermNew gomacro<cr>
 nnoremap <leader>tl :FloatermNew lf<cr>
 nnoremap <leader>tc :CocList floaterm<cr>
 nnoremap <leader>td :Denite floaterm<cr>
-nnoremap <leader>h :SemanticHighlightToggle<cr>
-nnoremap <leader><Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
+nnoremap <leader>s :SemanticHighlightToggle<cr>
+nnoremap <Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader><C-Space> :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader><Right>  :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader>z :split term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:
@@ -118,7 +122,9 @@ nnoremap <C-'> dw<esc><esc>
 nnoremap <C-Space> f cw
 nnoremap <leader>> <C-w>v<C-w>60>
 map <F6> :setlocal spell! spelllang=en_us<cr>
-nnoremap <silent> <S-F1> :Files<cr>
+nnoremap <silent> <Right> :Files<cr>
+nnoremap <silent> <S-F6> :Lines<cr>
+nnoremap <silent> <Up> :RG<cr> 
 nnoremap <F2> :Buffers<cr>
 nnoremap <silent> <F1> :Helptags<cr>
 imap <c-x><c-f> <plug>(fzf-complete-path)
@@ -201,6 +207,7 @@ tnoremap <A-j> <C-\><C-N><C-w>j
 tnoremap <A-k> <C-\><C-N><C-w>k 
 tnoremap <A-l> <C-\><C-N><C-w>l
 nnoremap <F3> :w!<cr>
+inoremap <F3> <esc>:w!<cr>
 nnoremap <leader>V :VimBeGood<cr>
 
 let g:kitty_navigator_no_mappings = 1
@@ -224,7 +231,7 @@ iabbrev gv #Global Variables
 iabbrev fs #Functions
 iabbrev qt /* vim: set filetype=tex : */
 iabbrev \l {\Latex}
-"iabbrev :4 for(i=;i ;i )<Esc>F=a
+iabbrev  for(i=;i ;i )<Esc>F=a
 iabbrev rf func recurse (i int)int{}<esc>i<cr><esc>Ototal=1<esc>ofor ; i>0; i--{}<esc>i<cr>total=i<esc>2jareturn total<esc>2kF=i
 iabbrev gogo // 2>/dev/null;/usr/bin/go run $0 $@; exit $?
 
@@ -238,6 +245,7 @@ tnoremap <C-t> <C-\><C-n>:q!<cr>
 filetype plugin on
 
 call plug#begin()
+Plug 'brennier/quicktex'
 Plug 'jaxbot/semantic-highlight.vim'
 Plug 'voldikss/vim-floaterm'
 Plug 'Valloric/vim-operator-highlight'
@@ -284,6 +292,17 @@ Plug 'AndrewRadev/splitjoin.vim'
 Plug 'unblevable/quick-scope'       
 Plug 'jceb/vim-orgmode'
 call plug#end() 
+
+function! RipgrepFzf(query, fullscreen)
+  let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case -- %s || true'
+  let initial_command = printf(command_fmt, shellescape(a:query))
+  let reload_command = printf(command_fmt, '{q}')
+  let spec = {'options': ['--phony', '--query', a:query, '--bind', 'change:reload:'.reload_command]}
+  call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+endfunction
+
+command! -nargs=* -bang RG call RipgrepFzf(<q-args>, <bang>0)
+
 
 function! s:isAtStartOfLine(mapping)
   let text_before_cursor = getline('.')[0 : col('.')-1]
@@ -335,6 +354,7 @@ iabbrev hh html:5tt,
 "| |  _ / _ \ 
 "| |_| | (_) |
 " \____|\___/ 
+autocmd FileType go inoremap  /**/F*i
 autocmd FileType go inoremap pout println()<space><esc>T(i
 autocmd FileType go inoremap lout log.Println()<space><esc>T(i
 autocmd FileType go inoremap lof log.Printf()<space><esc>T(i
@@ -346,7 +366,7 @@ autocmd FileType go inoremap toe t.Error()<space><esc>T(i
 autocmd FileType go inoremap .. :=
 autocmd FileType go inoremap :imp import
 autocmd FileType go inoremap :b []byte0
-autocmd FileType go inoremap :for for i := ; i ; i {}<esc>i<cr><esc>k0f;i
+autocmd FileType go inoremap  for i := ; i ; i {}<esc>i<cr><esc>k0f;i
 autocmd FileType go inoremap :sw switch {}<esc>i<cr><esc>Ocase:<esc>Fea
 autocmd FileType go inoremap :case case ():<esc>F)i
 autocmd FileType go inoremap :ar x := []{}<esc>F{i
@@ -371,11 +391,13 @@ autocmd FileType go inoremap  :v v, ok := <-c<esc>ofmt.Println(v,ok)
 autocmd FileType go inoremap :mar b, err := json.Marshal()<cr>if err != nil{}<esc>i<cr><esc>Ofmt.Println("error:", err)<esc>jofmt.Println(string(b))<esc>o//os.STdout.Write(b)<esc>5k0f(a
 autocmd FileType go inoremap :umar err := json.Unmarshal()<cr>if err != nil{}<esc>i<cr><esc>Ofmt.Println("error:", err)<esc>jofmt.Println(var)<esc>o//os.STdout.Write(var)<esc>5k0f(a
 autocmd FileType go inoremap  func (b By--) Len() int {return len(b)}<cr>func (b By--) Swap (i, j int) {b[i], b[j]=b[j], b[i]}<cr>func (b By--) Less (i, j int) bool {return b[i].-- < b[j].--}<cr><cr>sort.Sort(By--(var))
-autocmd FileType go inoremap <F15> if err != nil{}<esc>i<cr><esc>Ofmt.Println(err)<esc>
+autocmd FileType go inoremap  if err != nil{}<esc>i<cr><esc>Ofmt.Println(err)<esc>
 autocmd FileType go inoremap :wait var wg sync.WaitGroup<cr>wg.Add()<cr>wg.Done()<cr>wg.Wait()
 autocmd FileType go inoremap :mut var mu sync.Mutex<cr>mu.Lock()<cr>mu.Unlock()
 autocmd FileType go inoremap <M-R> return
 autocmd FileType go inoremap <Right> string
+autocmd FileType go inoremap <M-CR> return
+autocmd FileType go inoremap  error
 autocmd FileType go inoremap <Left> int
 autocmd FileType go inoremap <Up> []byte()<esc>i
 autocmd FileType go inoremap <M-Right> []string
@@ -387,15 +409,13 @@ autocmd FileType go inoremap :wg var wg sync.WaitGroup
 autocmd FileType go inoremap :mu var mu sync.Mutex
 autocmd FileType go inoremap <M-Up> c := make (chan )<esc>F a
 autocmd FileType go inoremap  func() {<cr>}()<esc>O
-autocmd FileType go inoremap  (t *testing.T) {<cr>}esc>O
+autocmd FileType go inoremap  (t *testing.T) {<cr>}esc>O
 autocmd FileType go inoremap  (b *testing.B) {<cr>}<esc>Ofor i:=0; i<b.N; i++
 autocmd FileType go inoremap <F5> chan 
 autocmd FileType go inoremap <F6> ctx := context.Background()
 autocmd FileType go nnoremap <M-!> :GoDoc<cr>
 autocmd FileType go nnoremap <F12> :GoInfo<cr>
 autocmd FileType go nnoremap <F19> :GoPlay<cr>
-autocmd FileType go nnoremap  <Left> ]]
-autocmd FileType go nnoremap <Right> [[
 autocmd FileType go nnoremap <F16> :GoAlternate<cr>
 autocmd FileType go nnoremap <M-f> daf
 autocmd FileType go nnoremap <M-F> dif
@@ -471,7 +491,7 @@ let g:airline#extensions#tabline#enabled = 1
 "| |   / _` || |/ _ \ \/ /
 "| |__| (_| || |  __/>  < 
 "|_____\__,_||_|\___/_/\_\
-"autocmd FileType tex inoremap
+autocmd FileType tex inoremap
 autocmd FileType tex inoremap :art \documentclass{article}<Space><Esc>T{i
 autocmd FileType tex inoremap :beam \documentclass{beamer}<Space><Esc>T{i
 autocmd FileType tex inoremap :stand \documentclass{standalone}<Space><Esc>T{i
