@@ -95,7 +95,7 @@ nnoremap <leader>a :help airline-configuration<cr>
 nnoremap <leader>B :split $HOME/.zshrc<cr>
 nnoremap <leader>e :split $HOME/.config/nvim/init.vim<cr>
 nnoremap <leader>E :vsplit $HOME/.config/nvim/init.vim<cr>
-nnoremap  :source $HOME/.config/nvim/init.vim<cr>
+nnoremap  :source $HOME/.config/nvim/init.vim<cr>
 nnoremap <leader>q :term://gtop<cr>:set number!<cr>:set relativenumber!<cr>:vsplit term://glances<cr>:set number!<cr>:set relativenumber!<cr>
 nnoremap <leader>3 :vsplit term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:split term://zsh<cr>:split term://cmus<cr><esc><C-w>h<C-w>h
 nnoremap <F12> :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>:vsplit term://tty-clock -c<cr>:split term://cmus<cr>:split term://calcurse<cr><C-W>h<C-W>h
@@ -106,7 +106,7 @@ nnoremap <leader><F2> :split term://cmus<cr>
 nnoremap <leader>r <C-w>la<esc>k<cr><C-\><C-n><C-w>h<esc>
 nnoremap <leader>s :SemanticHighlightToggle<cr>
 nnoremap <Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
-nnoremap <Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>agm<cr>
+nnoremap <C-Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>agm<cr>
 nnoremap <leader><C-Space> :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader><Right>  :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader>z :split term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:
@@ -131,13 +131,6 @@ imap <c-x><c-f> <plug>(fzf-complete-path)
 "| |__| (_) | |___ 
 " \____\___/ \____|
 "
-"inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
-"inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-"inoremap <silent><expr> <TAB>
-"      \ pumvisible() ? "\<C-n>" :
-"      \ <SID>check_back_space() ? "\<TAB>" :
-"      \ coc#refresh()
-"inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
 
 if exists('*complete_info')
   inoremap <expr> <cr> complete_info()["selected"] != "-1" ? "\<C-y>" : "\<C-g>u\<CR>"
@@ -195,7 +188,7 @@ nnoremap <leader>i :CocInstall
 map <leader>n :cnext<cr>
 map <leader>N :cprevious<cr>
 noremap <leader>gc :GCheckout<cr>
-noremap <leader>gm :GitMessenger<cr>
+noremap <leader>g :GitMessenger<cr>
 let g:git_messenger_no_default_mappings = v:true
     
 "Changing Terminal Buffers
@@ -246,7 +239,6 @@ Plug 'stsewd/fzf-checkout.vim'
 Plug 'garyburd/go-explorer'
 Plug 'brennier/quicktex'
 Plug 'jaxbot/semantic-highlight.vim'
-Plug 'voldikss/vim-floaterm'
 Plug 'Valloric/vim-operator-highlight'
 Plug 'jacoborus/tender.vim'
 Plug 'ryanoasis/vim-devicons'
@@ -323,19 +315,6 @@ nnoremap <leader>4 :PlugInstall<cr>
 nnoremap <leader>@ :PlugUpdate<cr>
 nnoremap <leader># :PlugClean<cr>
 
-" __  __       _ _   _  ____                          
-"|  \/  |_   _| | |_(_)/ ___|   _ _ __ ___  ___  _ __ 
-"| |\/| | | | | | __| | |  | | | | '__/ __|/ _ \| '__|
-"| |  | | |_| | | |_| | |__| |_| | |  \__ \ (_) | |   
-"|_|  |_|\__,_|_|\__|_|\____\__,_|_|  |___/\___/|_|   
-let g:multi_cursor_start_word_key      = '<C-j>'
-let g:multi_cursor_select_all_word_key = '<A-j>'
-let g:multi_cursor_start_key           = 'g<C-j>'
-let g:multi_cursor_select_all_key      = 'g<A-j>'
-let g:multi_cursor_next_key            = '<C-j>'
-let g:multi_cursor_prev_key            = '<C-p>'
-let g:multi_cursor_skip_key            = '<C-x>'
-let g:multi_cursor_quit_key            = '<Esc>'
 " _____                          _   
 "| ____|_ __ ___  _ __ ___   ___| |_ 
 "|  _| | '_ ` _ \| '_ ` _ \ / _ \ __|
