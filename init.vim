@@ -84,6 +84,7 @@ endfunction
 "Modifying .VIMRC
 nnoremap <leader>t :TableModeEnable<cr>
 nnoremap <leader>d :TableModeDisable<cr>
+nnoremap <BS> :bd<cr>
 nnoremap <M-Up> :bn<cr>
 nnoremap <M-Down> :bp<cr>
 nnoremap <M-(> ci(
@@ -94,7 +95,7 @@ nnoremap <leader>a :help airline-configuration<cr>
 nnoremap <leader>B :split $HOME/.zshrc<cr>
 nnoremap <leader>e :split $HOME/.config/nvim/init.vim<cr>
 nnoremap <leader>E :vsplit $HOME/.config/nvim/init.vim<cr>
-nnoremap  :source $HOME/.config/nvim/init.vim<cr>
+nnoremap  :source $HOME/.config/nvim/init.vim<cr>
 nnoremap <leader>q :term://gtop<cr>:set number!<cr>:set relativenumber!<cr>:vsplit term://glances<cr>:set number!<cr>:set relativenumber!<cr>
 nnoremap <leader>3 :vsplit term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:split term://zsh<cr>:split term://cmus<cr><esc><C-w>h<C-w>h
 nnoremap <F12> :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>:vsplit term://tty-clock -c<cr>:split term://cmus<cr>:split term://calcurse<cr><C-W>h<C-W>h
@@ -103,18 +104,13 @@ nnoremap <leader>m :vsplit term://cmus<cr>
 nnoremap <leader>o :set ma<cr>
 nnoremap <leader><F2> :split term://cmus<cr>
 nnoremap <leader>r <C-w>la<esc>k<cr><C-\><C-n><C-w>h<esc>
-nnoremap <leader>  :FloatermNew<cr>
-nnoremap <leader>tf :FloatermNew fzf<cr>
-nnoremap <leader>tg :FloatermNew gomacro<cr>
-nnoremap <leader>tl :FloatermNew lf<cr>
-nnoremap <leader>tc :CocList floaterm<cr>
-nnoremap <leader>td :Denite floaterm<cr>
 nnoremap <leader>s :SemanticHighlightToggle<cr>
 nnoremap <Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
+nnoremap <Down> :split term://zsh<cr>:set number!<cr>:set relativenumber!<cr>agm<cr>
 nnoremap <leader><C-Space> :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader><Right>  :vsplit term://zsh<cr>:set number!<cr>:set relativenumber!<cr>a
 nnoremap <leader>z :split term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:
-nnoremap <leader>M :vsplit term://neomutt<cr>
+nnoremap <leader>M :vsplit erm://neomutt<cr>
 nnoremap <esc> A
 nnoremap ' cw
 nnoremap " caw
@@ -125,7 +121,7 @@ map <F6> :setlocal spell! spelllang=en_us<cr>
 nnoremap <silent> <Right> :Files<cr>
 nnoremap <silent> <S-F6> :Lines<cr>
 nnoremap <silent> <Up> :RG<cr> 
-nnoremap <F2> :Buffers<cr>
+nnoremap <Left> :Buffers<cr>
 nnoremap <silent> <F1> :Helptags<cr>
 imap <c-x><c-f> <plug>(fzf-complete-path)
 
@@ -198,7 +194,8 @@ nnoremap <leader>i :CocInstall
 "nnoremap <leader>d :g/^$/d<cr>
 map <leader>n :cnext<cr>
 map <leader>N :cprevious<cr>
-noremap <leader>g :GitMessenger<cr>
+noremap <leader>gc :GCheckout<cr>
+noremap <leader>gm :GitMessenger<cr>
 let g:git_messenger_no_default_mappings = v:true
     
 "Changing Terminal Buffers
@@ -240,11 +237,13 @@ autocmd FileType tex nnoremap <F17> :VimtexView<cr>
 
 "Escaping Terminal mode
 tnoremap <M-F10> <C-\><C-n><C-w>h
-tnoremap <C-t> <C-\><C-n>:q!<cr>
+tnoremap  <C-\><C-n>:q!<cr>
 
 filetype plugin on
 
 call plug#begin()
+Plug 'stsewd/fzf-checkout.vim'
+Plug 'garyburd/go-explorer'
 Plug 'brennier/quicktex'
 Plug 'jaxbot/semantic-highlight.vim'
 Plug 'voldikss/vim-floaterm'
@@ -300,6 +299,8 @@ function! RipgrepFzf(query, fullscreen)
   let spec = {'options': ['--phony', '--query', a:query, '--bind', 'change:reload:'.reload_command]}
   call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
 endfunction
+let g:fzf_layout ={'window': {'width': 0.8, 'height': 0.8}}
+"let $FZF_DEFAULT_OPTS='--reverse'
 
 command! -nargs=* -bang RG call RipgrepFzf(<q-args>, <bang>0)
 
@@ -383,6 +384,7 @@ autocmd FileType go inoremap :amap m[]=type{}<esc>0f[a
 autocmd FileType go inoremap :map m := make(map[type]type)
 autocmd FileType go inoremap :dmap delete(m,key)<esc>Fk
 autocmd FileType go inoremap :s type name struct{}<esc>i<cr><esc>Ofield type<esc>kFn
+autocmd FileType go inoremap :m func main (){}<esc>i<cr><esc>O
 autocmd FileType go inoremap :i type name interface{}<esc>i<cr><esc>Omethod<esc>kFm
 autocmd FileType go inoremap vok //TEST<cr>v, ok := m[""]<cr>fmt.Println(v)<cr>fmt.Println(ok)<cr><cr>if v, ok := m[""]; ok{}<esc>i<cr>fmt.Println("value:", v)<esc>5k0f"a
 autocmd FileType go inoremap <M-r> for i, v := range * {}<esc>i<cr>fmt.Println(i, v)<cr><esc>2k0f*cw
@@ -413,7 +415,9 @@ autocmd FileType go inoremap  (t *testing.T) {<cr>}esc>O
 autocmd FileType go inoremap  (b *testing.B) {<cr>}<esc>Ofor i:=0; i<b.N; i++
 autocmd FileType go inoremap <F5> chan 
 autocmd FileType go inoremap <F6> ctx := context.Background()
-autocmd FileType go nnoremap <M-!> :GoDoc<cr>
+autocmd FileType go nnoremap <S-F1> :GoDoc<cr>
+autocmd FileType go nnoremap <M-F1> :GoDef<cr>
+autocmd FileType go nnoremap <C-S-F1> :GeDoc
 autocmd FileType go nnoremap <F12> :GoInfo<cr>
 autocmd FileType go nnoremap <F19> :GoPlay<cr>
 autocmd FileType go nnoremap <F16> :GoAlternate<cr>
@@ -480,7 +484,7 @@ autocmd FileType css inoremap :fv font-variant:;<esc>i
 "|____/ \__,_|___/_| |_| |____/ \___|_|  |_| .__/ \__|_|_| |_|\__, |
 "                                          |_|                |___/ 
 "Bash Scripting Syntax 
-let @f = 'i() {function}b'
+let @f = 'i() {function}b'
 let @p = 'cwprintln!("");hh'
 let @r = 'a$()ýaci(varýabcwýa'
 let g:airline_theme='distinguished'

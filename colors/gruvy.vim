@@ -51,12 +51,18 @@ hi Statement  ctermfg=167			cterm=bold
 hi PreConit   ctermfg=166
 hi Type       ctermfg=214   cterm=bold
 hi Pmenu      ctermfg=223 ctermbg=234  
+hi goDeclaration ctermfg=167
+hi goVar ctermfg=167
+hi goReceiverVar ctermfg=39
+hi goParen ctermfg=39
+hi goSingleDecl ctermfg=39
+hi goVarArgs ctermfg=39
 "hi goDirective 
 "hi goConstants 
 "hi goDeclaration 
 "hi goDeclType 
 "hi goBuiltins 
-hi goVariable ctermbg=208
+"hi goBuiltins 
 "hi Boolean
 "hi CTagsClass
 "hi CTagsGlobalConstant
@@ -87,7 +93,7 @@ hi DefinedName ctermfg=66
 "hi Float
 "hi FoldColumn
 hi Folded ctermfg=245 ctermbg=235
-hi Function ctermfg=142
+hi Function ctermfg=69
 hi Identifier ctermfg=108
 "hi Ignore
 "hi IncSearch

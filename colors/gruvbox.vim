@@ -70,11 +70,11 @@ if exists('g:gruvbox_contrast')
 endif
 
 if !exists('g:gruvbox_contrast_dark')
-  let g:gruvbox_contrast_dark='medium'
+  let g:gruvbox_contrast_dark='hard'
 endif
 
 if !exists('g:gruvbox_contrast_light')
-  let g:gruvbox_contrast_light='medium'
+  let g:gruvbox_contrast_light='hard'
 endif
 
 let s:is_dark=(&background == 'dark')
@@ -1391,3 +1391,10 @@ endfunction
 " }}}
 
 " vim: set sw=2 ts=2 sts=2 et tw=80 ft=vim fdm=marker:
+"
+hi goVar ctermfg=39
+hi goDeclaration ctermfg=167
+hi goReceiverVar ctermfg=39
+hi goParen ctermfg=39
+hi goSingleDecl ctermfg=39
+hi goVarArgs ctermfg=39
