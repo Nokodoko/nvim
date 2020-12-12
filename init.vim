@@ -9,7 +9,7 @@
 let mapleader = "t"
 set background=dark    
 syntax on
-colorscheme gruvy
+colorscheme gruvbox
 syn match Braces display '[:={}()\[\]]'
 hi Braces guifg=blue
 filetype on                                
@@ -223,6 +223,7 @@ iabbrev qt /* vim: set filetype=tex : */
 iabbrev \l {\Latex}
 iabbrev  for(i=;i ;i )<Esc>F=a
 iabbrev rf func recurse (i int)int{}<esc>i<cr><esc>Ototal=1<esc>ofor ; i>0; i--{}<esc>i<cr>total=i<esc>2jareturn total<esc>2kF=i
+iabbrev pg Plug ''<esc>T'i
 iabbrev gogo // 2>/dev/null;/usr/bin/go run $0 $@; exit $?
 
 autocmd FileType tex nnoremap <F7> :VimtexCompile<cr>
@@ -230,11 +231,15 @@ autocmd FileType tex nnoremap <F17> :VimtexView<cr>
 
 "Escaping Terminal mode
 tnoremap <M-F10> <C-\><C-n><C-w>h
-tnoremap  <C-\><C-n>:q!<cr>
+tnoremap  <C-\><C-n>:q!<cr>
 
 filetype plugin on
 
+
 call plug#begin()
+Plug 'hkupty/iron.nvim'
+Plug 'donRaphaco/neotex'
+Plug 'https://github.com/kevinhwang91/rnvimr.git'
 Plug 'stsewd/fzf-checkout.vim'
 Plug 'garyburd/go-explorer'
 Plug 'brennier/quicktex'
@@ -334,6 +339,9 @@ iabbrev hh html:5tt,
 "| |  _ / _ \ 
 "| |_| | (_) |
 " \____|\___/ 
+autocmd FileType go inoremap nN \u2717
+autocmd FileType go inoremap :o os.Args[]<esc>i
+autocmd FileType go inoremap yY \u2713
 autocmd FileType go inoremap  /**/F*i
 autocmd FileType go inoremap pout println()<space><esc>T(i
 autocmd FileType go inoremap lout log.Println()<space><esc>T(i
@@ -363,7 +371,7 @@ autocmd FileType go inoremap :amap m[]=type{}<esc>0f[a
 autocmd FileType go inoremap :map m := make(map[type]type)
 autocmd FileType go inoremap :dmap delete(m,key)<esc>Fk
 autocmd FileType go inoremap :s type name struct{}<esc>i<cr><esc>Ofield type<esc>kFn
-autocmd FileType go inoremap :m func main (){}<esc>i<cr><esc>O
+autocmd FileType go inoremap :m func main(){}<esc>i<cr><esc>O
 autocmd FileType go inoremap :i type name interface{}<esc>i<cr><esc>Omethod<esc>kFm
 autocmd FileType go inoremap vok //TEST<cr>v, ok := m[""]<cr>fmt.Println(v)<cr>fmt.Println(ok)<cr><cr>if v, ok := m[""]; ok{}<esc>i<cr>fmt.Println("value:", v)<esc>5k0f"a
 autocmd FileType go inoremap <M-r> for i, v := range * {}<esc>i<cr>fmt.Println(i, v)<cr><esc>2k0f*cw
@@ -396,7 +404,7 @@ autocmd FileType go inoremap <F5> chan
 autocmd FileType go inoremap <F6> ctx := context.Background()
 autocmd FileType go nnoremap <S-F1> :GoDoc<cr>
 autocmd FileType go nnoremap <M-F1> :GoDef<cr>
-autocmd FileType go nnoremap <C-S-F1> :GeDoc
+autocmd FileType go nnoremap <C-S-F1> :GeDoc 
 autocmd FileType go nnoremap <F12> :GoInfo<cr>
 autocmd FileType go nnoremap <F19> :GoPlay<cr>
 autocmd FileType go nnoremap <F16> :GoAlternate<cr>
@@ -405,6 +413,7 @@ autocmd FileType go nnoremap <M-F> dif
 autocmd FileType go nnoremap <F18> :go tool! cover -html=c.out
 autocmd FileType go inoremap <S-F7> <esc> :GoFillStruct<cr>
 autocmd FileType go nnoremap <F7> res, err := http.Get()<cr>if err != nil{<cr>}<esc>Olog.Fatal(err)
+"let g:go_def_resuse_buffer
 map <leader>G :GoTestFunc<cr>
 "let g:go_auto_sameids = 1
 let g:go_fmt_command = "goimports" 
@@ -483,8 +492,10 @@ autocmd FileType tex inoremap :uP \usepackage[]<Space><Esc>T[i
 autocmd FileType tex inoremap :ua \usepackage{algorithm}<Space><Esc>T{i
 autocmd FileType tex inoremap :ul \usepackage{listings}<Space><Esc>T{i
 autocmd FileType tex inoremap :ut \usepackage{tikz}<Space><Esc>T{i
+autocmd FileType tex inoremap :cen \begin{center}<cr><cr><cr><cr>\end{center}<Esc>2ki
 autocmd FileType tex inoremap :doc \begin{document}<cr><cr><cr><cr>\end{document}<Esc>2ki
 autocmd FileType tex inoremap :ba \begin{algorithm}<cr>\begin{algorithmic}<cr><cr>\end{algorithmic}<cr>\end{algorithm}<Esc>2Oi
+autocmd FileType tex inoremap :bb \begin{abstract}<cr>\end{abstract}<Esc>2Oi
 autocmd FileType tex inoremap :algo \begin{algorithm}<cr><cr><cr><cr>\end{algorithm}<Esc>2Oi<Tab>
 autocmd FileType tex inoremap :tik \begin{tikzpicture}<cr><cr>\end{tikzpicture}<Esc>ki<Tab>
 autocmd FileType tex inoremap :gant \begin{gantt}[drawledgerline=true]{}<cr><cr>\end{gantt}<Esc>2k$F{a
@@ -528,6 +539,8 @@ autocmd FileType tex inoremap :/ \\*
 autocmd FileType tex nnoremap tq :!pdflatex
 autocmd FileType tex inoremap :su {\displaytyle subset}
 autocmd FileType tex inoremap :cc \cancel{}<esc>F{a
+autocmd FileType tex nnoremap <S-F7> :NeoTexOn<cr>
+autocmd FileType tex nnoremap <S-F8> :NeoTexOff<cr>
 
 "Math
 autocmd FileType tex inoremap :$ $$<Space><Esc>F$i
@@ -550,12 +563,55 @@ let g:asyncomplete_auto_popup = 1
 highlight Pmenu ctermbg=234 
 highlight Pmenu ctermfg=15 
 
-nmap <C-n> :NERDTreeToggle<CR>
+"nmap <C-n> :NERDTreeToggle<CR>
 "autocmd VimEnter * NERDTree | wincmd p
+nnoremap  :RnvimrToggle<cr>
 
+" Make Ranger replace Netrw and be the file explorer
+let g:rnvimr_enable_ex = 1
+
+" Make Ranger to be hidden after picking a file
+let g:rnvimr_enable_picker = 1
+
+" Disable a border for floating window
+let g:rnvimr_draw_border = 0
+
+" Hide the files included in gitignore
+let g:rnvimr_hide_gitignore = 1
+
+" Change the border's color
+let g:rnvimr_border_attr = {'fg': 14, 'bg': -1}
+
+" Make Neovim wipe the buffers corresponding to the files deleted by Ranger
+let g:rnvimr_enable_bw = 1
+
+" Set up only two columns in miller mode and draw border with both
+let g:rnvimr_ranger_cmd = 'ranger --cmd="set column_ratios 1,1"
+            \ --cmd="set draw_borders both"'
 if !exists('##TextYankPost')
   map y <Plug>(highlightedyank)
 endif
+"
+" Link CursorLine into RnvimrNormal highlight in the Floating window
+highlight link RnvimrNormal CursorLine
+
+" Resize floating window by all preset layouts
+tnoremap <silent> <M-i> <C-\><C-n>:RnvimrResize<CR>
+
+" Resize floating window by special preset layouts
+tnoremap <silent> <M-l> <C-\><C-n>:RnvimrResize 1,8,9,11,5<CR>
+
+" Resize floating window by single preset layout
+tnoremap <silent> <M-y> <C-\><C-n>:RnvimrResize 6<CR>
+
+" Map Rnvimr action
+let g:rnvimr_action = {
+            \ '<C-t>': 'NvimEdit tabedit',
+            \ '<C-x>': 'NvimEdit split',
+            \ '<C-v>': 'NvimEdit vsplit',
+            \ 'gw': 'JumpNvimCwd',
+            \ 'yw': 'EmitRangerCwd'
+            \ }
 
 let g:highlightedyank_highlight_duration = 100
 "let g:airline_symbols
@@ -566,3 +622,4 @@ let g:cursormode_mode_func = 'mode'
 
 nnoremap <leader><BS> :ls<CR>:b<Space>
 
+luafile $HOME/.config/nvim/plugins.lua
