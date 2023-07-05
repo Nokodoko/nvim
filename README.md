@@ -1,6 +1,8 @@
-![alt text](./colors/.n0kovim.png)
+![alt text](./colors/pictures/n0kovim.png)
 Neovim Configuration
 
+
+![alt text](./colors/pictures/n0kovimExample.png)
 
 There have been many iterations and different machines that I've worked on. This is the most recent iteration, clean history.
 
