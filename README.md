@@ -1,4 +1,4 @@
-![alt text](~/Pictures/n0kovim.png)
+![alt text](./.n0kovim.png)
 Neovim Configuration
 
 
