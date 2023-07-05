@@ -1,5 +1,3 @@
-~/Pictures/n0kovim.png
-
 Neovim Configuration
 
 
