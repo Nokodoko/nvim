@@ -16,4 +16,4 @@ _Installation:_
  
 4. You can go back and uncomment `tokyonight` from the `options.lua` file, as the colorshceme is now installed. 
 
-Navigate around. `Which-key` plugin will show you a few of the keybindings (activated with you press the leader key `space`, but not all of them. You can find those in the `keymaps.lua` file.)
+Navigate around. `which-key` plugin will show you a few of the keybindings (activated with you press the leader key `space`, but not all of them. You can find those in the `keymaps.lua` file.)

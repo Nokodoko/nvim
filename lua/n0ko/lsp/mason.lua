@@ -1,7 +1,7 @@
 local servers = {
     "bashls",
     "clangd",
-    "codelldb",
+--    "codelldb",
     "dockerls",
     "gopls",
     "jedi_language_server",
