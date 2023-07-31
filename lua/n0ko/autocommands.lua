@@ -36,6 +36,11 @@ vim.cmd ([[
     autocmd FileType vimwiki inoremap i<Right> __<esc>ha
   augroup end
 
+  augroup kmonad
+  autocmd!
+  autocmd BufRead,BufNewFile *.kbd set filetype=lisp
+  augroup end
+
   augroup zsh
     autocmd!
     autocmd FileType zsh inoremap bh #!/bin/bash
