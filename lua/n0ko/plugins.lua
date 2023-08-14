@@ -100,6 +100,7 @@ return packer.startup(function(use)
     use("jackMort/ChatGPT.nvim")
     --use("github/copilot.vim")
 
+    --use("lervag/vimtex")
     --rust
     use("rust-lang/rust.vim")
     use("simrat39/rust-tools.nvim")

@@ -3,11 +3,18 @@ if not status_ok then
     return
 end
 
-lspconfig {}
+-- RUST --
+lspconfig.rust_analyzer.setup{
+    settings = {
+        ['rust_analyzer'] = {},
+    },
+}
 
----- RUST --
---lspconfig.rust_analyzer.setup{
---    settings = {
---        ['rust_analyzer'] = {},
---    },
---}
+
+require('lspconfig').lua_language_server.setup{
+    settings = {
+        diagnostics = {
+            globals = { 'vim' }
+        }
+    }
+}

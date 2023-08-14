@@ -45,7 +45,7 @@ local setup = {
     messages = {
         -- NOTE: If you enable messages, then the cmdline is enabled automatically.
         -- This is a current Neovim limitation.
-        enabled = true, -- enables the Noice messages UI
+        enabled = false, -- enables the Noice messages UI
         view = "mini", -- default view for messages
         view_error = "mini", -- view for errors
         view_warn = "mini", -- view for
@@ -158,7 +158,7 @@ local setup = {
         message = {
             -- Messages shown by lsp servers
             enabled = true,
-            view = "notify",
+            view = "split",
             opts = {},
         },
         -- defaults for hover and signature help

@@ -40,6 +40,7 @@ keymap("n", "Q", ":q!<cr>", opts)
 keymap("n", "<c-f>", ":RnvimrToggle<cr>", opts)
 keymap("n", "<leader><leader>w", ":VimwikiIndex<cr>", opts)
 keymap("n", "<leader><leader>x", ":! chmod +x ./%<cr>", opts)
+keymap("n", "<leader><leader>s", ":w <cr> :source %<cr>", opts)
 --keymap("n", "<leader>D", ":require('duck'.hatch("", 1) end, {})<cr>", opts)
 
 --Plugin Binds

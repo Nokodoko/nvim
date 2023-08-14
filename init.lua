@@ -2,6 +2,9 @@
 require("n0ko.options")
 require("n0ko.plugins")
 --
+--plugin feedback loop
+require("n0ko.globals")
+
 --keys
 require("n0ko.keymaps")
 require("n0ko.autocommands")
@@ -11,7 +14,7 @@ require("n0ko.whichkey")
 require("n0ko.lsp")
 require("n0ko.cmp")
 require("n0ko.treesitter")
-require("n0ko.lsp.null-ls")
+--require("n0ko.lsp.null-ls")
 require("n0ko.lsp.handlers").setup()
 ----
 ----bling

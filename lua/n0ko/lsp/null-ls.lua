@@ -13,6 +13,7 @@ local spelling = null_ls.builtins.completion.spell
 
 local defaults = {
     border = nil,
+    globals = { 'vim' },
     cmd = { "nvim" },
     debounce = 250,
     debug = false,
