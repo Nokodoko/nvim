@@ -67,7 +67,7 @@ vim.cmd ([[
     autocmd FileType lua inoremap fout print()<space><esc>T(i
     autocmd FileType lua inoremap bh #!/bin/env lua<cr><cr><cr>
     autocmd FileType lua inoremap -x local mobdebug = require("mobdebug")<cr>mobdebug.start()<esc>Goamobdebug.done()<esc>
-    autocmd FileType lua inoremap <leader>i local status_ok, = pcall(require(""))<cr>if not status_ok then<cr>return<cr>end<esc>3kf,a 
+    autocmd FileType lua inoremap <leader><leader>i local status_ok, = pcall(require(""))<cr>if not status_ok then<cr>return<cr>end<esc>3kf,a 
   augroup end
 
   augroup sh

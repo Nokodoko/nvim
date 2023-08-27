@@ -100,7 +100,9 @@ return packer.startup(function(use)
     use("jackMort/ChatGPT.nvim")
     --use("github/copilot.vim")
 
-    --use("lervag/vimtex")
+    --Latex
+    use("lervag/vimtex")
+    use("donRaphaco/neotex", {'for', 'tex'})
     --rust
     use("rust-lang/rust.vim")
     use("simrat39/rust-tools.nvim")
@@ -141,6 +143,7 @@ return packer.startup(function(use)
         "nvim-treesitter/nvim-treesitter",
         run = ":TSUpdate",
     })
+    use("nvim-treesitter/playground")
     use("JoosepAlviste/nvim-ts-context-commentstring")
 
     -- Git
