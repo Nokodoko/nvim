@@ -98,6 +98,8 @@ return packer.startup(function(use)
     use("tpope/vim-surround")
     use("nvim-orgmode/orgmode")
     use("jackMort/ChatGPT.nvim")
+    use("folke/neodev.nvim")
+    use("folke/neoconf.nvim")
     --use("github/copilot.vim")
 
     --Latex
@@ -110,7 +112,7 @@ return packer.startup(function(use)
     use("L3MON4D3/LuaSnip") --snippet engine
     use("rafamadriz/friendly-snippets") -- a bunch of snippets to use
     --
-    --DAP
+    use ("https://github.com/francoiscabrol/ranger.vim")    --DAP
     use("mfussenegger/nvim-dap")
     -- LSP
     use("williamboman/mason.nvim") -- simple to use language server installer

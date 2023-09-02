@@ -11,7 +11,7 @@ lspconfig.rust_analyzer.setup{
 }
 
 
-require('lspconfig').lua_language_server.setup{
+lspconfig.lua_language_server.setup{
     settings = {
         diagnostics = {
             globals = { 'vim' }

@@ -1,0 +1,8 @@
+{
+    "workspace.library": [
+        "/home/n0ko/.local/share/nvim/site/pack/packer/start/neodev.nvim/types/nightly",
+        "/usr/local/share/nvim/runtime/lua",
+        "/home/n0ko/.config/nvim/lua",
+        "${3rd}/luv/library"
+    ]
+}

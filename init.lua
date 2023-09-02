@@ -1,6 +1,7 @@
 --base config
 require("n0ko.options")
 require("n0ko.plugins")
+require("neodev").setup()
 --
 --plugin feedback loop
 require("n0ko.globals")

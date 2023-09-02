@@ -209,6 +209,21 @@ _G.packer_plugins = {
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/navigator.lua",
     url = "https://github.com/ray-x/navigator.lua"
   },
+  ["neoconf.nvim"] = {
+    loaded = true,
+    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/neoconf.nvim",
+    url = "https://github.com/folke/neoconf.nvim"
+  },
+  ["neodev.nvim"] = {
+    loaded = true,
+    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/neodev.nvim",
+    url = "https://github.com/folke/neodev.nvim"
+  },
+  neotex = {
+    loaded = true,
+    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/neotex",
+    url = "https://github.com/donRaphaco/neotex"
+  },
   ["nlsp-settings.nvim"] = {
     loaded = true,
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/nlsp-settings.nvim",
@@ -290,6 +305,11 @@ _G.packer_plugins = {
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/patchreview-vim",
     url = "https://github.com/junkblocker/patchreview-vim"
   },
+  playground = {
+    loaded = true,
+    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/playground",
+    url = "https://github.com/nvim-treesitter/playground"
+  },
   ["plenary.nvim"] = {
     loaded = true,
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/plenary.nvim",
@@ -309,6 +329,11 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/quick-scope",
     url = "https://github.com/unblevable/quick-scope"
+  },
+  ["ranger.vim"] = {
+    loaded = true,
+    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/ranger.vim",
+    url = "https://github.com/francoiscabrol/ranger.vim"
   },
   ripgrep = {
     loaded = true,
@@ -414,6 +439,11 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/vim-table-mode",
     url = "https://github.com/dhruvasagar/vim-table-mode"
+  },
+  vimtex = {
+    loaded = true,
+    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/vimtex",
+    url = "https://github.com/lervag/vimtex"
   },
   vimwiki = {
     loaded = true,
