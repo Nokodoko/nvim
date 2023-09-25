@@ -1,49 +1,5 @@
-
---local api = vim.api
---local list =P( vim.fn.systemlist('fd . -d1 -tf ' .. vim.fn.expand("%:p:h")) )
-
---vim.fn.systemlist('fd  -tf' .. vim.fn.expand("%:p:h"))
-
---local listview = ListView:new({
---  loc = 'up_left',
---  prompt = true,
---  rect = { height = 5 },
---  -- data = display_data,
---  data = {
---      'Listview: test line should show',
---      'list line2 tes',
---      'list line3 tesssst ',
---      'list line4 tast',
---    },
---})
-
-
---local guihua = require('guihua')
---local lines = {}
----- Use fd to find files in the current directory
---local function find_files()
---  local fd = vim.fn.systemlist('fd .' .. vim.fn.expand("%:p:h"))
---  if vim.v.shell_error ~= 0 then
---    print("fd command failed")
---    return
---  end
---  for _, file in ipairs(fd) do
---    table.insert(lines, {text = file, data = file})
---  end
---  guihua.ListView:new({
---    data = lines,
---    prompt = 'Files:',
---    on_confirm = function(item)
---      api.nvim_command('edit ' .. item.data)
---    end
---  })
---end
---find_files()
-
-
-
 --vim.fn.systemlist('ls'))
-----P( vim.fn.systemlist('fd . -tf -d1' .. vim.fn.expand("%:p:h")) )
+----.*vim.fn.systemlist('echo hello' .. vim.fn.expand("%:p:h")))
 ----.* vim.split(vim.system('echo hello'), '\n', 1) )
 
 
@@ -80,7 +36,7 @@
 --    return t
 --end
 
---.*vim.api)
+----.*vim.api)
 
 --local telescope = require('telescope')
 --local finders = require('telescope.finders')
@@ -142,3 +98,9 @@
 --  }):find()
 --end
 --find_files()
+
+
+
+
+
+

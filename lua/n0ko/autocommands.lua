@@ -62,12 +62,35 @@ vim.cmd ([[
   augroup lua
   autocmd!
     autocmd FileType lua nnoremap <leader>x :! lua % <cr>
+    autocmd FileType lua inoremap lc local 
+    autocmd FileType lua inoremap rq require("")<esc>F"i
     autocmd FileType lua inoremap <Right> string
     autocmd FileType lua inoremap <Left> int
     autocmd FileType lua inoremap fout print()<space><esc>T(i
     autocmd FileType lua inoremap bh #!/bin/env lua<cr><cr><cr>
-    autocmd FileType lua inoremap -x local mobdebug = require("mobdebug")<cr>mobdebug.start()<esc>Goamobdebug.done()<esc>
+    autocmd FileType lua inoremap -x local mobdebug = require("mobdebug")<cr>mobdebug.start()<esc>Gomobdebug.done()<esc>
     autocmd FileType lua inoremap <leader><leader>i local status_ok, = pcall(require, "")<cr>if not status_ok then<cr>return<cr>end<esc>3kf,a 
+    autocmd FileType lua inoremap <leader><leader>mi local modules = {}<cr>local <cr><cr><cr>for i, module in ipairs(modules)do<cr>local status_ok, required_module = pcall(require, module)<cr>if not status_ok then<cr>print("Could not import" .. module)<cr>return<cr>end<cr><cr>if i == 1 then<cr> = required_module<cr>end<cr>end<esc>14kci{
+
+
+  augroup end
+
+  augroup python
+    autocmd!
+    autocmd FileType python inoremap bh #!/bin/env python
+    autocmd FileType python inoremap .. ${}<esc>T{i
+    autocmd FileType python inoremap a<Right> alias=''<esc>i
+    autocmd FileType python inoremap fn function() {<cr>}<esc>kfn;a 
+    autocmd FileType python inoremap  for<esc>odo<esc>odone<esc>O
+    autocmd FileType python inoremap :ca case in<esc>o;;<esc>oesac
+    autocmd FileType python inoremap :read read -p "" ANSWER<esc>F"ci"
+    autocmd FileType python inoremap ii if []; then<esc>oelse<esc>ofi<esc>2kf[ci[
+    autocmd FileType python inoremap :? RC=$?
+    autocmd FileType python inoremap :NS ns=notify-send
+    autocmd FileType python inoremap :DM dmenu='dmenu -m 0 -fn VictorMono:size=20 -nf green -nb black -nf green -sb black'
+    autocmd FileType python inoremap :DN dun='dunstify -h int:value:'
+    autocmd FileType python inoremap e<Right> echo $()<esc>ci(
+    autocmd FileType python inoremap <leader>x :! chmod +x ./% 
   augroup end
 
   augroup sh

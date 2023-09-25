@@ -45,6 +45,9 @@ return packer.startup(function(use)
     use("rcarriga/nvim-notify")
     use("munifTanjim/nui.nvim")
 
+    --search
+    use("romgrk/fzy-lua-native")
+
     -- My plugins here
     use("wbthomason/packer.nvim") -- Have packer manage itself
     use("nvim-lua/popup.nvim") -- An implementation of the Popup API from vim in Neovim
@@ -78,6 +81,7 @@ return packer.startup(function(use)
 
     --fun
     use("tamton-aquib/duck.nvim")
+    use ( {'ray-x/guihua.lua', run = 'cd lua/fzy && make'} )
 
     -- use "lunarvim/colorschemes" -- A bunch of colorschemes you can try out
     use("lunarvim/darkplus.nvim")
@@ -127,7 +131,7 @@ return packer.startup(function(use)
         requires = { "nvim-lua/plenary.nvim" },
     })
     use("fatih/vim-go") --, { 'do': ':GoUpdateBinaries' }
-    use({ "ray-x/navigator.lua", requires = { "ray-x/guihua.lua", run = "cd lua/fzy && make" } })
+    --use({ "ray-x/navigator.lua", requires = { "ray-x/guihua.lua", run = "cd lua/fzy && make" } })
     use("ray-x/lsp_signature.nvim")
     use("gfanto/fzf-lsp.nvim")
     use("someone-stole-my-name/yaml-companion.nvim")

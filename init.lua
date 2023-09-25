@@ -1,3 +1,4 @@
+-- vim:fileencoding=utf-8:ft=lua:foldmethod=marker
 --base config
 require("n0ko.options")
 require("n0ko.plugins")
@@ -5,6 +6,14 @@ require("neodev").setup()
 --
 --plugin feedback loop
 require("n0ko.globals")
+
+--FUN {{{
+require("guihua.maps").setup({
+    maps = {
+        close_view = '<C-x>'
+    }
+})
+--}}}
 
 --keys
 require("n0ko.keymaps")

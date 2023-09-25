@@ -159,6 +159,11 @@ _G.packer_plugins = {
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/fzf.vim",
     url = "https://github.com/junegunn/fzf.vim"
   },
+  ["fzy-lua-native"] = {
+    loaded = true,
+    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/fzy-lua-native",
+    url = "https://github.com/romgrk/fzy-lua-native"
+  },
   ["gitsigns.nvim"] = {
     loaded = true,
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/gitsigns.nvim",
@@ -203,11 +208,6 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/mason.nvim",
     url = "https://github.com/williamboman/mason.nvim"
-  },
-  ["navigator.lua"] = {
-    loaded = true,
-    path = "/home/n0ko/.local/share/nvim/site/pack/packer/start/navigator.lua",
-    url = "https://github.com/ray-x/navigator.lua"
   },
   ["neoconf.nvim"] = {
     loaded = true,

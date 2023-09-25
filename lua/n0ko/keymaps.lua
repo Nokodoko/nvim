@@ -50,12 +50,6 @@ keymap("n", "<leader>t", ":TableModeEnable<cr>", opts)
 keymap("n", "<leader>d", ":TableModeDisable<cr>", opts)
 keymap(
     "n",
-    "<leader>q",
-    ":term://gtop<cr>:set number!<cr>:set relativenumber!<cr>:vsplit term://glances<cr>:set number!<cr>:set relativenumber!<cr>",
-    opts
-)
-keymap(
-    "n",
     "<leader>3",
     ":vsplit term://tty-clock -c<cr>:set number!<cr>:set relativenumber!<cr>:split term://zsh<cr>:split term://cmus<cr><esc><C-w>h<C-w>h",
     opts
@@ -106,6 +100,8 @@ keymap("n", "<A-k>", "<Esc>:m .-2<CR>==gi", opts)
 -- Press jk fast to enter
 --keymap ("i", "jk",   "<ESC>",   opts)
 keymap("i", "<F3>", "<esc>:w!<cr>", opts)
+
+keymap("i", "<leader><leader>f", "-- vim:fileencoding=utf-8:ft=lua:foldmethod=marker", opts)
 
 -- Visual -- Stay in indent mode
 keymap("v", "<", "<gv", opts)
