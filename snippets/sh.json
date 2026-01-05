@@ -1,0 +1,20 @@
+{                                            
+  "shebang": {                               
+    "prefix": "#!",                          
+    "body": [                                
+      "#!/bin/bash",                         
+      ""                                     
+    ],                                       
+    "description": "Shebang for Bash scripts"
+  },                                         
+  "for-loop": {                              
+    "prefix": "for",                         
+    "body": [                                
+      "for i in {1..10}",                    
+      "do",                                  
+      "\t$0",                                
+      "done"                                 
+    ],                                       
+    "description": "For loop"                
+  }                                          
+}                                            
