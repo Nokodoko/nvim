@@ -9,17 +9,74 @@
 -- Use this section to add custom general mappings. See `:h vim.keymap.set()`.
 
 -- An example helper to create a Normal mode mapping
+-- maps
+-- NORMAL MODE
 local nmap = function(lhs, rhs, desc)
-  -- See `:h vim.keymap.set()`
   vim.keymap.set('n', lhs, rhs, { desc = desc })
 end
+
+-- INSERT MODE
+local imap = function(lhs, rhs, desc)
+  vim.keymap.set('i', lhs, rhs, { desc = desc })
+end
+
+-- VISUAL MODE
+local vmap = function(lhs, rhs, desc)
+  vim.keymap.set('v', lhs, rhs, { desc = desc })
+end
+
 
 -- Paste linewise before/after current line
 -- Usage: `yiw` to yank a word and `]p` to put it on the next line.
 nmap('[p', '<Cmd>exe "put! " . v:register<CR>', 'Paste Above')
 nmap(']p', '<Cmd>exe "put "  . v:register<CR>', 'Paste Below')
+nmap('Q' , '<cmd>q!<cr>', 'quit neovime')
+nmap('<F3>', '<cmd>w!<cr>', 'write file')
+nmap('<F9>', ':set hlsearch!<cr>', 'toggle highlight')
+nmap('<esc>', 'A', 'instant insert end of line')
+nmap(',', 'caw', 'instant change all word')
 
--- Many general mappings are created by 'mini.basics'. See 'plugin/30_mini.lua'
+-- NAVIGATE BUFFERS
+nmap("<S-h>", ":bnext<CR>", 'next buffer')
+nmap("<S-l>", ":bprevious<CR>", 'previous buffer')
+nmap("<F6>", "l", 'right window')
+nmap("<F5>", "k", 'up window')
+nmap("<F10>", "h", 'left window')
+nmap("<F4>", "j", 'down window')
+
+-- Resize with arrows
+nmap("<C-Up>", "<cmd>resize -2<CR>", 'resize up')
+nmap("<C-Down>", "<cmd>resize +2<CR>", 'resize down')
+nmap("<C-Left>", "<cmd>vertical resize -2<CR>", 'resize left')
+nmap("<C-Right>", "<cmd>vertical resize +2<CR>", 'resize right')
+
+-- DAD-BOD
+nmap("<leader>dd", "<cmd>DBUI<cr>", 'dadbod ui')
+nmap("<leader>da", "<cmd>DBUIAddConnection<cr>", 'dadbod add connection')
+nmap("<leader>db", "<cmd>DB<cr>", 'dadbod')
+nmap("<leader>dc", "<cmd>DBUIClose<cr>", 'dadbod close')
+
+--Chatgpt
+--keymap("n", "<leader>c", ":ChatGPTRunCustomCodeAction<cr>", opts)
+nmap("<C-e>", "<cmd>ChatGPT<cr>", 'chatgpt')
+vmap("<C-e>", "<cmd>ChatGPTRun explain_code<cr>", 'chatgpt explain')
+vmap("<C-f>", "<cmd>ChatGPTRun fix_bugs<cr>", 'chatgpt fix code')
+vmap("<C-t>", "<cmd>ChatGPTRun add_tests<cr>", 'chatgpt run tests')
+
+-- checkhealth
+nmap("+", "<cmd>checkhealth<cr>", 'check health')
+
+--TELESCOPE FUNCTIONS
+nmap("<leader><leader>?", "<cmd>Telescope help_tags theme=ivy<cr>",'Telescope help tags')
+nmap("<leader><leader>tr", "<cmd>Telescope registers theme=ivy<cr>",'Telescope registers')
+nmap("<leader><leader>f", "<cmd>Telescope find_files theme=ivy<cr>",'Telescope find_files')
+nmap("<Up>", "<cmd>Telescope live_grep theme=ivy<cr>",'Telescope live_grep')
+nmap("<leader><leader>gr", "<cmd>Telescope lsp_references theme=ivy<cr>",'Telescope lsp_references')
+nmap("<leader><leader>gd", "<cmd>Telescope lsp_definitions<cr>",'Telescope lsp definitions')
+nmap("<leader><leader>lr", "<cmd>lua vim.lsp.buf.rename()<cr>", 'Telescope rename')
+nmap("<leader><leader>th", "<cmd>Telescope harpoon marks<cr>", 'Telesecope harpoon')
+
+
 
 -- stylua: ignore start
 -- The next part (until `-- stylua: ignore end`) is aligned manually for easier
@@ -91,6 +148,8 @@ nmap_leader('bD', '<Cmd>lua MiniBufremove.delete(0, true)<CR>',  'Delete!')
 nmap_leader('bs', new_scratch_buffer,                            'Scratch')
 nmap_leader('bw', '<Cmd>lua MiniBufremove.wipeout()<CR>',        'Wipeout')
 nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
+nmap_leader( 'w', '<cmd>VimwikiIndex<cr>', 'vimwiki')
+
 
 -- e is for 'Explore' and 'Edit'. Common usage:
 -- - `<Leader>ed` - open explorer at current working directory

@@ -50,6 +50,11 @@ now_if_args(function()
     'lua',
     'vimdoc',
     'markdown',
+    'terraform',
+    'python',
+    'yaml',
+    'json',
+    'bash',
     -- Add here more languages with which you want to use tree-sitter
     -- To see available languages:
     -- - Execute `:=require('nvim-treesitter').get_available()`
@@ -90,6 +95,8 @@ end)
 -- Add it now if file (and not 'mini.starter') is shown after startup.
 now_if_args(function()
   add('neovim/nvim-lspconfig')
+end)
+  -- add('lua_ls')
 
   -- Use `:h vim.lsp.enable()` to automatically enable language server based on
   -- the rules provided by 'nvim-lspconfig'.
@@ -98,7 +105,7 @@ now_if_args(function()
   -- vim.lsp.enable({
   --   -- For example, if `lua-language-server` is installed, use `'lua_ls'` entry
   -- })
-end)
+-- end)
 
 -- Formatting =================================================================
 
@@ -131,11 +138,31 @@ end)
 -- snippet files. They are organized in 'snippets/' directory (mostly) per language.
 -- 'mini.snippets' is designed to work with it as seamlessly as possible.
 -- See `:h MiniSnippets.gen_loader.from_lang()`.
-later(function() add('rafamadriz/friendly-snippets') end)
+-- TODO: 1. keybinds
+local pluglist = {
+  "ThePrimeagen/harpoon",
+  "jackMort/ChatGPT.nvim",
+  "jesseduffield/lazygit",
+  "munifTanjim/nui.nvim",
+  "nvim-lua/plenary.nvim",
+  "nvim-telescope/telescope-frecency.nvim",
+  "nvim-telescope/telescope.nvim",
+  "rafamadriz/friendly-snippets",
+  "ryanmsnyder/toggleterm-manager.nvim",
+  "tpope/vim-dadbod",
+  "tpope/vim-surround",
+  "vimwiki/vimwiki",
+  "folke/noice.nvim.git",
+  -- "hrsh7th/nvim-cmp",
+}
 
--- Honorable mentions =========================================================
+for _, plugin in ipairs(pluglist) do 
+  later(function() add(plugin) end)
+end
 
--- 'mason-org/mason.nvim' (a.k.a. "Mason") is a great tool (package manager) for
+-- honorable mentions =========================================================
+
+-- 'mason-org/mason.nvim' (a.k.a. "mason") is a great tool (package manager) for
 -- installing external language servers, formatters, and linters. It provides
 -- a unified interface for installing, updating, and deleting such programs.
 --
@@ -143,20 +170,50 @@ later(function() add('rafamadriz/friendly-snippets') end)
 -- If you need them to work elsewhere, consider using other package managers.
 --
 -- You can use it like so:
--- later(function()
---   add('mason-org/mason.nvim')
---   require('mason').setup()
--- end)
+later(function()
+  add('mason-org/mason.nvim')
+  require('mason').setup()
+end)
+
+later(function()
+  -- config = function()
+  add('jackMort/ChatGPT.nvim')
+  require('chatgpt').setup()
+end)
+
+later(function()
+  add('folke/noice.nvim.git')
+  require('noice').setup({
+    routes = {
+      -- Show macro recording messages in cmdline
+      {
+        view = "cmdline",
+        filter = { event = "msg_showmode" },
+      },
+    },
+  })
+end)
+
+require('mini.hues').setup({
+  background = '#2f1c22',
+  foreground = '#cdc4c6',
+  plugins = {
+    default = false,
+    ['nvim-mini/mini.nvim'] = true,
+  },
+})
 
 -- Beautiful, usable, well maintained color schemes outside of 'mini.nvim' and
 -- have full support of its highlight groups. Use if you don't like 'miniwinter'
 -- enabled in 'plugin/30_mini.lua' or other suggested 'mini.hues' based ones.
--- MiniDeps.now(function()
---   -- Install only those that you need
---   add('sainnhe/everforest')
---   add('Shatur/neovim-ayu')
---   add('ellisonleao/gruvbox.nvim')
---
---   -- Enable only one
---   vim.cmd('color everforest')
--- end)
+MiniDeps.now(function()
+  -- Install only those that you need
+  add('tiagovla/tokyodark.nvim')
+  add('catppuccin/nvim')
+  add('EdenEast/nightfox.nvim')
+  add('ellisonleao/gruvbox.nvim')
+  add('Mofiqul/dracula.nvim')
+
+  -- Enable only one
+vim.cmd('color tokyodark')
+end)

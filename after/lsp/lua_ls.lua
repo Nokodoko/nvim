@@ -1,6 +1,6 @@
--- ┌────────────────────┐
--- │ LSP config example │
--- └────────────────────┘
+-- ┌────────────────┐
+-- │ Lua LSP config │
+-- └────────────────┘
 --
 -- This file contains configuration of 'lua_ls' language server.
 -- Source: https://github.com/LuaLS/lua-language-server
@@ -19,9 +19,9 @@ return {
     -- Use this function to define buffer-local mappings and behavior that depend
     -- on attached client or only makes sense if there is language server attached.
   end,
-  -- LuaLS Structure of these settings comes from LuaLS, not Neovim
+  -- Terraformls Structure of these settings comes from LuaLS, not Neovim
   settings = {
-    Lua = {
+    terraform = {
       -- Define runtime properties. Use 'LuaJIT', as it is built into Neovim.
       runtime = { version = 'LuaJIT', path = vim.split(package.path, ';') },
       workspace = {

@@ -53,6 +53,7 @@ if not vim.loop.fs_stat(mini_path) then
   vim.cmd('echo "Installed `mini.nvim`" | redraw')
 end
 
+
 -- Plugin manager. Set up immediately for `now()`/`later()` helpers.
 -- Example usage:
 -- - `MiniDeps.add('...')` - use inside config to add a plugin
@@ -64,6 +65,7 @@ end
 -- - `:h MiniDeps-commands` - all available commands
 -- - 'plugin/30_mini.lua' - more details about 'mini.nvim' in general
 require('mini.deps').setup()
+-- require('n0ko.config.autocommands')
 
 -- Define config table to be able to pass data between scripts
 _G.Config = {}
@@ -85,3 +87,93 @@ end
 -- Some plugins and 'mini.nvim' modules only need setup during startup if Neovim
 -- is started like `nvim -- path/to/file`, otherwise delaying setup is fine
 _G.Config.now_if_args = vim.fn.argc(-1) > 0 and MiniDeps.now or MiniDeps.later
+
+
+-- NOTE: GET LSP WORKING
+vim.lsp.enable('terraform-ls')
+vim.lsp.config('terraform-ls', {
+  cmd = { 'terraform-ls', 'serve' },
+  settings = {
+    terraform = {
+      runtime = {
+        version = '0.38.3'
+      }
+    }
+  },
+  ignore = { 'ignoreSingleFileWarning' },
+  filetypes = { '.tf', 'terraform' },
+})
+
+-- Keep your existing lua_ls configuration
+vim.lsp.enable('lua_ls')
+vim.lsp.config('lua_ls', {
+  settings = {
+    Lua = {
+      runtime = {
+        version = 'LuaJIT',
+      }
+    },
+  filetypes = { 'lua' },
+  }
+})
+
+-- 3. BASH LANGUAGE SERVER (bashls)
+vim.lsp.enable('bashls')
+vim.lsp.config('bashls', {
+  cmd = { 'bash-language-server', 'start' },
+  settings = {
+    bashIde = {
+      globPattern = vim.env.GLOB_PATTERN or '*@(.sh|.inc|.bash|.command)',
+    },
+  },
+  filetypes = { 'sh', 'bash' },
+  root_markers = { '.git' },
+})
+
+-- 3. BASH LANGUAGE SERVER (bashls)
+vim.lsp.enable('basedpyright')
+vim.lsp.config('basedpyright', {
+  cmd = { 'basedpyright-langserver', '--stdio' },
+  filetypes = { 'python' },
+  root_markers = {
+    'pyrightconfig.json',
+    'pyproject.toml',
+    'setup.py',
+    'setup.cfg',
+    'requirements.txt',
+    'Pipfile',
+    '.git',
+  },
+  settings = {
+    basedpyright = {
+      analysis = {
+        autoSearchPaths = true,
+        useLibraryCodeForTypes = true,
+        diagnosticMode = 'openFilesOnly',
+      },
+    },
+  },
+  on_attach = function(client, bufnr)
+    vim.api.nvim_buf_create_user_command(bufnr, 'LspPyrightOrganizeImports', function()
+      local params = {
+        command = 'basedpyright.organizeimports',
+        arguments = { vim.uri_from_bufnr(bufnr) },
+      }
+
+      -- Using client.request() directly because "basedpyright.organizeimports" is private
+      -- (not advertised via capabilities), which client:exec_cmd() refuses to call.
+      -- https://github.com/neovim/neovim/blob/c333d64663d3b6e0dd9aa440e433d346af4a3d81/runtime/lua/vim/lsp/client.lua#L1024-L1030
+      ---@diagnostic disable-next-line: param-type-mismatch
+      client.request('workspace/executeCommand', params, nil, bufnr)
+    end, {
+      desc = 'Organize Imports',
+    })
+
+--------------------------------------------------
+    vim.api.nvim_buf_set_keymap(bufnr, '<leader>l',':LspPyriright', {
+      desc = 'Reconfigure basedpyright with the provided python path',
+      nargs = 1,
+      complete = 'file',
+    })
+  end,
+})

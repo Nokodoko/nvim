@@ -2,6 +2,13 @@
 -- │ Built-in Neovim behavior │
 -- └──────────────────────────┘
 --
+
+local global = vim.g
+global.virtualedit = "block" -- Allow cursor to move where there is no text in visual block mode
+global.autoformat = true
+
+global.root_spec = { "lsp", { ".git", "lua" }, "cwd" }
+
 -- This file defines Neovim's built-in behavior. The goal is to improve overall
 -- usability in a way that works best with MINI.
 --
