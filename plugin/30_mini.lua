@@ -152,7 +152,43 @@ now(function() require('mini.starter').setup() end)
 -- See also:
 -- - `:h MiniStatusline-example-content` - example of default content. Use it to
 --   configure a custom statusline by setting `config.content.active` function.
-now(function() require('mini.statusline').setup() end)
+now(function()
+  -- Custom section showing auto-format status
+  local format_status = function()
+    if vim.bo.buftype ~= '' then return '' end
+    local buf_autoformat = vim.b.autoformat
+    -- Buffer-local setting takes precedence
+    local enabled = buf_autoformat ~= nil and buf_autoformat or vim.g.autoformat
+    return enabled and '' or '[fmt off]'
+  end
+
+  require('mini.statusline').setup({
+    content = {
+      active = function()
+        local mode, mode_hl = MiniStatusline.section_mode({ trunc_width = 120 })
+        local git = MiniStatusline.section_git({ trunc_width = 40 })
+        local diff = MiniStatusline.section_diff({ trunc_width = 75 })
+        local diagnostics = MiniStatusline.section_diagnostics({ trunc_width = 75 })
+        local lsp = MiniStatusline.section_lsp({ trunc_width = 75 })
+        local filename = MiniStatusline.section_filename({ trunc_width = 140 })
+        local fileinfo = MiniStatusline.section_fileinfo({ trunc_width = 120 })
+        local location = MiniStatusline.section_location({ trunc_width = 75 })
+        local search = MiniStatusline.section_searchcount({ trunc_width = 75 })
+        local fmt = format_status()
+
+        return MiniStatusline.combine_groups({
+          { hl = mode_hl, strings = { mode } },
+          { hl = 'MiniStatuslineDevinfo', strings = { git, diff, diagnostics, lsp } },
+          '%<', -- Truncation point
+          { hl = 'MiniStatuslineFilename', strings = { filename } },
+          '%=', -- End left alignment
+          { hl = 'MiniStatuslineFileinfo', strings = { fmt, fileinfo } },
+          { hl = mode_hl, strings = { search, location } },
+        })
+      end,
+    },
+  })
+end)
 
 -- Tabline. Sets `:h 'tabline'` to show all listed buffers in a line at the top.
 -- Buffers are ordered as they were created. Navigate with `[b` and `]b`.
@@ -550,6 +586,15 @@ later(function()
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
+  -- On `<C-l>` accept completion if pmenu visible, otherwise accept Copilot suggestion
+  local copilot_accept = function()
+    local suggestion = package.loaded['copilot.suggestion']
+    if suggestion and suggestion.is_visible() then
+      suggestion.accept()
+      return true
+    end
+  end
+  MiniKeymap.map_multistep('i', '<C-l>', { 'pmenu_accept', copilot_accept })
   -- On `<BS>` just try to account for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<BS>', { 'minipairs_bs' })
 end)

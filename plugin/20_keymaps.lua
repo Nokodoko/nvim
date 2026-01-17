@@ -116,6 +116,7 @@ _G.Config.leader_group_clues = {
   { mode = 'n', keys = '<Leader>o', desc = '+Other' },
   { mode = 'n', keys = '<Leader>s', desc = '+Session' },
   { mode = 'n', keys = '<Leader>t', desc = '+Terminal' },
+  { mode = 'n', keys = '<Leader>u', desc = '+UI/Toggle' },
   { mode = 'n', keys = '<Leader>v', desc = '+Visits' },
 
   { mode = 'x', keys = '<Leader>g', desc = '+Git' },
@@ -285,6 +286,58 @@ nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',          'Write current')
 -- t is for 'Terminal'
 nmap_leader('tT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')
 nmap_leader('tt', '<Cmd>vertical term<CR>',   'Terminal (vertical)')
+
+-- u is for 'UI/Toggle'. Common usage:
+-- - `<Leader>uf` - toggle auto-format globally
+-- - `<Leader>uF` - toggle auto-format for current buffer
+local toggle_autoformat_global = function()
+  vim.g.autoformat = not vim.g.autoformat
+  local state = vim.g.autoformat and 'enabled' or 'disabled'
+  vim.notify('Auto-format ' .. state .. ' (global)', vim.log.levels.INFO)
+end
+local toggle_autoformat_buffer = function()
+  local buf = vim.api.nvim_get_current_buf()
+  vim.b[buf].autoformat = not vim.b[buf].autoformat
+  local state = vim.b[buf].autoformat and 'enabled' or 'disabled'
+  vim.notify('Auto-format ' .. state .. ' (buffer)', vim.log.levels.INFO)
+end
+
+nmap_leader('uf', toggle_autoformat_global,  'Toggle format (global)')
+nmap_leader('uF', toggle_autoformat_buffer,  'Toggle format (buffer)')
+
+-- Copilot toggles (requires copilot.lua to be loaded)
+local toggle_copilot = function()
+  local ok, suggestion = pcall(require, 'copilot.suggestion')
+  if not ok then
+    vim.notify('Copilot not loaded', vim.log.levels.WARN)
+    return
+  end
+  if suggestion.is_visible() then
+    suggestion.dismiss()
+  end
+  vim.b.copilot_suggestion_auto_trigger = not vim.b.copilot_suggestion_auto_trigger
+  local state = vim.b.copilot_suggestion_auto_trigger and 'enabled' or 'disabled'
+  vim.notify('Copilot ' .. state .. ' (buffer)', vim.log.levels.INFO)
+end
+
+nmap_leader('uc', toggle_copilot,                                'Toggle Copilot (buffer)')
+nmap_leader('uC', '<Cmd>Copilot panel<CR>',                      'Copilot panel')
+
+-- Toggle YAML/Jinja2 filetype
+local toggle_yaml_jinja = function()
+  if vim.bo.filetype == "yaml" then
+    vim.bo.filetype = "yaml.jinja2"
+  elseif vim.bo.filetype == "yaml.jinja2" then
+    vim.bo.filetype = "yaml"
+  elseif vim.bo.filetype == "helm" then
+    vim.bo.filetype = "yaml"
+  else
+    vim.bo.filetype = "yaml.jinja2"
+  end
+  vim.notify('Filetype: ' .. vim.bo.filetype, vim.log.levels.INFO)
+end
+
+nmap_leader('uj', toggle_yaml_jinja,                             'Toggle YAML/Jinja2')
 
 -- v is for 'Visits'. Common usage:
 -- - `<Leader>vv` - add    "core" label to current file.

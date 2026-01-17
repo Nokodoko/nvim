@@ -115,8 +115,15 @@ end)
 --
 -- The 'stevearc/conform.nvim' plugin is a good and maintained solution for easier
 -- formatting setup.
+--
+-- Auto-formatting behavior inspired by LazyVim:
+-- - Formats on save by default
+-- - Can be toggled globally with <Leader>uf or per-buffer with <Leader>uF
 later(function()
   add('stevearc/conform.nvim')
+
+  -- Global auto-format state (enabled by default)
+  vim.g.autoformat = true
 
   -- See also:
   -- - `:h Conform`
@@ -124,8 +131,43 @@ later(function()
   -- - `:h conform-formatters`
   require('conform').setup({
     -- Map of filetype to formatters
-    -- Make sure that necessary CLI tool is available
-    -- formatters_by_ft = { lua = { 'stylua' } },
+    -- Make sure that necessary CLI tool is available (install via Mason or system)
+    formatters_by_ft = {
+      lua = { 'stylua' },
+      python = { 'ruff_format', 'ruff_organize_imports' },
+      go = { 'goimports', 'gofmt' },
+      terraform = { 'terraform_fmt' },
+      tf = { 'terraform_fmt' },
+      ['terraform-vars'] = { 'terraform_fmt' },
+      yaml = { 'prettier' },
+      json = { 'prettier' },
+      jsonc = { 'prettier' },
+      markdown = { 'prettier' },
+      sh = { 'shfmt' },
+      bash = { 'shfmt' },
+      -- Use LSP formatting as fallback for filetypes without dedicated formatter
+      ['_'] = { 'trim_whitespace' },
+    },
+
+    -- Format on save with timeout
+    format_on_save = function(bufnr)
+      -- Check buffer-local toggle (takes precedence)
+      local bufvar = vim.b[bufnr].autoformat
+      if bufvar ~= nil then
+        if not bufvar then return end
+      elseif not vim.g.autoformat then
+        -- Check global toggle
+        return
+      end
+      return { timeout_ms = 3000, lsp_format = 'fallback' }
+    end,
+
+    -- Customize formatters
+    formatters = {
+      shfmt = {
+        prepend_args = { '-i', '2' }, -- 2 space indent
+      },
+    },
   })
 end)
 
@@ -175,6 +217,74 @@ later(function()
   require('mason').setup()
 end)
 
+-- GitHub Copilot ============================================================
+--
+-- AI-powered code completion. Provides inline suggestions as you type.
+-- Requires GitHub Copilot subscription and authentication.
+--
+-- First-time setup:
+-- 1. Run `:Copilot auth` to authenticate with GitHub
+-- 2. Follow the browser prompts to authorize
+--
+-- Usage:
+-- - Suggestions appear as virtual text (grayed out) as you type
+-- - `<M-l>` (Alt+l) - Accept suggestion
+-- - `<M-]>` - Next suggestion
+-- - `<M-[>` - Previous suggestion
+-- - `<C-]>` - Dismiss suggestion
+-- - `:Copilot panel` - Open suggestions panel
+--
+-- See also:
+-- - `:h copilot` - Plugin documentation
+later(function()
+  add('zbirenbaum/copilot.lua')
+
+  require('copilot').setup({
+    -- Disable default Tab mapping to avoid conflict with mini.completion
+    suggestion = {
+      enabled = true,
+      auto_trigger = true,
+      debounce = 75,
+      keymap = {
+        accept = false,         -- Handled by MiniKeymap with pmenu fallback
+        accept_word = '<M-w>',  -- Alt+w to accept word
+        accept_line = '<M-j>',  -- Alt+j to accept line
+        next = '<M-]>',         -- Alt+] for next suggestion
+        prev = '<M-[>',         -- Alt+[ for previous suggestion
+        dismiss = '<C-]>',      -- Ctrl+] to dismiss
+      },
+    },
+    panel = {
+      enabled = true,
+      auto_refresh = true,
+      keymap = {
+        jump_prev = '[[',
+        jump_next = ']]',
+        accept = '<CR>',
+        refresh = 'gr',
+        open = '<M-CR>',        -- Alt+Enter to open panel
+      },
+    },
+    filetypes = {
+      -- Enable for your main languages
+      terraform = true,
+      python = true,
+      go = true,
+      yaml = true,
+      json = true,
+      markdown = true,
+      lua = true,
+      sh = true,
+      bash = true,
+      -- Disable for these
+      gitcommit = false,
+      gitrebase = false,
+      help = false,
+      ['*'] = true,             -- Enable for all other filetypes
+    },
+  })
+end)
+
 later(function()
   -- config = function()
   add('jackMort/ChatGPT.nvim')
@@ -184,6 +294,20 @@ end)
 later(function()
   add('folke/noice.nvim.git')
   require('noice').setup({
+    popupmenu = {
+      enabled = false,
+    },
+    lsp = {
+      hover = { enabled = false },
+      signature = { enabled = false },
+      progress = { enabled = false },
+      message = { enabled = false },
+      override = {
+        ["vim.lsp.util.convert_input_to_markdown_lines"] = false,
+        ["vim.lsp.util.stylize_markdown"] = false,
+        ["cmp.entry.get_documentation"] = false,
+      },
+    },
     routes = {
       -- Show macro recording messages in cmdline
       {

@@ -19,16 +19,22 @@ return {
     -- Use this function to define buffer-local mappings and behavior that depend
     -- on attached client or only makes sense if there is language server attached.
   end,
-  -- Terraformls Structure of these settings comes from LuaLS, not Neovim
+  -- Structure of these settings comes from LuaLS, not Neovim
   settings = {
-    terraform = {
+    Lua = {
       -- Define runtime properties. Use 'LuaJIT', as it is built into Neovim.
-      runtime = { version = 'LuaJIT', path = vim.split(package.path, ';') },
+      runtime = { version = 'LuaJIT' },
+      diagnostics = {
+        -- Recognize Neovim globals
+        globals = { 'vim', 'MiniDeps', 'Snacks' },
+      },
       workspace = {
         -- Don't analyze code from submodules
         ignoreSubmodules = true,
         -- Add Neovim's methods for easier code writing
         library = { vim.env.VIMRUNTIME },
+        -- Disable third-party library prompts
+        checkThirdParty = false,
       },
     },
   },
