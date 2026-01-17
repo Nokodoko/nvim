@@ -584,8 +584,15 @@ later(function()
   -- Navigate 'mini.completion' menu with `<Tab>` /  `<S-Tab>` or `<C-j>` / `<C-k>`
   MiniKeymap.map_multistep('i', '<Tab>', { 'pmenu_next' })
   MiniKeymap.map_multistep('i', '<S-Tab>', { 'pmenu_prev' })
-  MiniKeymap.map_multistep('i', '<C-j>', { 'pmenu_next' })
   MiniKeymap.map_multistep('i', '<C-k>', { 'pmenu_prev' })
+  -- <C-j>: pmenu navigation first, then fall back to snippet expand
+  local snippet_expand = {
+    condition = function() return true end,
+    action = function()
+      if MiniSnippets then MiniSnippets.expand() end
+    end,
+  }
+  MiniKeymap.map_multistep('i', '<C-j>', { 'pmenu_next', snippet_expand })
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
