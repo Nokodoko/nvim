@@ -585,14 +585,13 @@ later(function()
   MiniKeymap.map_multistep('i', '<Tab>', { 'pmenu_next' })
   MiniKeymap.map_multistep('i', '<S-Tab>', { 'pmenu_prev' })
   MiniKeymap.map_multistep('i', '<C-k>', { 'pmenu_prev' })
-  -- <C-j>: pmenu navigation first, then fall back to snippet expand
-  local snippet_expand = {
-    condition = function() return true end,
-    action = function()
-      if MiniSnippets then MiniSnippets.expand() end
-    end,
-  }
-  MiniKeymap.map_multistep('i', '<C-j>', { 'pmenu_next', snippet_expand })
+  -- <C-j>: pmenu navigation when visible, otherwise do nothing (snippets disabled on this key)
+  vim.keymap.set('i', '<C-j>', function()
+    if vim.fn.pumvisible() == 1 then
+      return '<C-n>'
+    end
+    return ''
+  end, { expr = true })
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
