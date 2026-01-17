@@ -409,6 +409,7 @@ later(function()
     return MiniCompletion.default_process_items(items, base, process_items_opts)
   end
   require('mini.completion').setup({
+    delay = { completion = 50, info = 50, signature = 50 },
     lsp_completion = {
       -- Without this config autocompletion is set up through `:h 'completefunc'`.
       -- Although not needed, setting up through `:h 'omnifunc'` is cleaner
@@ -428,6 +429,29 @@ later(function()
   -- Advertise to servers that Neovim now supports certain set of completion and
   -- signature features through 'mini.completion'.
   vim.lsp.config('*', { capabilities = MiniCompletion.get_lsp_capabilities() })
+
+  -- Auto-trigger file path completion when typing path patterns
+  -- Detects: ./ ../ / ~/ and triggers <C-x><C-f> automatically
+  local path_completion_group = vim.api.nvim_create_augroup('path-completion', {})
+  vim.api.nvim_create_autocmd('TextChangedI', {
+    group = path_completion_group,
+    callback = function()
+      -- Skip if popup menu is already visible
+      if vim.fn.pumvisible() == 1 then return end
+
+      local line = vim.api.nvim_get_current_line()
+      local col = vim.api.nvim_win_get_cursor(0)[2]
+      local before_cursor = line:sub(1, col)
+
+      -- Match path patterns: ./ ../ / ~/ or word/
+      if before_cursor:match('[%.~/][%.%w_-]*/?[%w_.-]*$')
+        or before_cursor:match('%s[%.~/][%w_.-/]*$')
+        or before_cursor:match('^[%.~/][%w_.-/]*$')
+        or before_cursor:match('[%w_-]+/[%w_.-]*$') then
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-x><C-f>', true, false, true), 'n', false)
+      end
+    end,
+  })
 end)
 
 -- Autohighlight word under cursor with a customizable delay.
@@ -587,14 +611,28 @@ later(function()
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
   -- On `<C-l>` accept completion if pmenu visible, otherwise accept Copilot suggestion
-  local copilot_accept = function()
-    local suggestion = package.loaded['copilot.suggestion']
-    if suggestion and suggestion.is_visible() then
-      suggestion.accept()
-      return true
-    end
-  end
-  MiniKeymap.map_multistep('i', '<C-l>', { 'pmenu_accept', copilot_accept })
+  local pmenu_select_accept = {
+    condition = function()
+      return vim.fn.pumvisible() == 1
+    end,
+    action = function()
+      -- If nothing selected, select first item then accept; otherwise just accept
+      if vim.fn.complete_info({ 'selected' }).selected == -1 then
+        return '<C-n><C-y>'
+      end
+      return '<C-y>'
+    end,
+  }
+  local copilot_step = {
+    condition = function()
+      local suggestion = package.loaded['copilot.suggestion']
+      return suggestion and suggestion.is_visible()
+    end,
+    action = function()
+      require('copilot.suggestion').accept()
+    end,
+  }
+  MiniKeymap.map_multistep('i', '<C-l>', { pmenu_select_accept, copilot_step })
   -- On `<BS>` just try to account for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<BS>', { 'minipairs_bs' })
 end)
