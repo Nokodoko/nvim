@@ -800,6 +800,8 @@ later(function()
       -- Load from 'snippets/' directory of plugins, like 'friendly-snippets'
       snippets.gen_loader.from_lang({ lang_patterns = lang_patterns }),
     },
+    -- Disable default <C-j> expand mapping (use Tab or custom mapping instead)
+    mappings = { expand = '', jump_next = '', jump_prev = '' },
   })
 
   -- By default snippets available at cursor are not shown as candidates in
