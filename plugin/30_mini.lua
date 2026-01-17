@@ -581,9 +581,11 @@ later(function() require('mini.jump2d').setup() end)
 -- - `:h MiniKeymap.map_combo()` - map combo
 later(function()
   require('mini.keymap').setup()
-  -- Navigate 'mini.completion' menu with `<Tab>` /  `<S-Tab>`
+  -- Navigate 'mini.completion' menu with `<Tab>` /  `<S-Tab>` or `<C-j>` / `<C-k>`
   MiniKeymap.map_multistep('i', '<Tab>', { 'pmenu_next' })
   MiniKeymap.map_multistep('i', '<S-Tab>', { 'pmenu_prev' })
+  MiniKeymap.map_multistep('i', '<C-j>', { 'pmenu_next' })
+  MiniKeymap.map_multistep('i', '<C-k>', { 'pmenu_prev' })
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
