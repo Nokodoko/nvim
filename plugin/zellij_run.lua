@@ -13,12 +13,11 @@ end, {
   desc = 'Run visual selection in Zellij floating pane',
 })
 
--- Override visual mode ! behavior to use ZellijRun
--- When user types !bash in visual mode (without colon), it will use this plugin
+-- Override visual mode ! behavior to use ZellijRun with bash
 -- Use vim.schedule to ensure this runs after all plugins are loaded
 vim.api.nvim_create_autocmd('VimEnter', {
   once = true,
   callback = function()
-    vim.keymap.set('v', '!', ':<C-u>ZellijRun ', { desc = 'Run in Zellij floating pane' })
+    vim.keymap.set('v', '!', ':<C-u>ZellijRun bash<CR>', { desc = 'Run in Zellij floating pane' })
   end,
 })
