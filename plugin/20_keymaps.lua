@@ -12,69 +12,71 @@
 -- maps
 -- NORMAL MODE
 local nmap = function(lhs, rhs, desc)
-  vim.keymap.set('n', lhs, rhs, { desc = desc })
+	vim.keymap.set("n", lhs, rhs, { desc = desc })
 end
 
 -- INSERT MODE
 local imap = function(lhs, rhs, desc)
-  vim.keymap.set('i', lhs, rhs, { desc = desc })
+	vim.keymap.set("i", lhs, rhs, { desc = desc })
 end
 
 -- VISUAL MODE
 local vmap = function(lhs, rhs, desc)
-  vim.keymap.set('v', lhs, rhs, { desc = desc })
+	vim.keymap.set("v", lhs, rhs, { desc = desc })
 end
-
 
 -- Paste linewise before/after current line
 -- Usage: `yiw` to yank a word and `]p` to put it on the next line.
-nmap('[p', '<Cmd>exe "put! " . v:register<CR>', 'Paste Above')
-nmap(']p', '<Cmd>exe "put "  . v:register<CR>', 'Paste Below')
-nmap('Q' , '<cmd>q!<cr>', 'quit neovime')
-nmap('<F3>', '<cmd>w!<cr>', 'write file')
-nmap('<F9>', ':set hlsearch!<cr>', 'toggle highlight')
-nmap('<esc>', 'A', 'instant insert end of line')
-nmap(',', 'caw', 'instant change all word')
+nmap("[p", '<Cmd>exe "put! " . v:register<CR>', "Paste Above")
+nmap("]p", '<Cmd>exe "put "  . v:register<CR>', "Paste Below")
+nmap("Q", "<cmd>q!<cr>", "quit neovime")
+nmap("<F3>", "<cmd>w!<cr>", "write file")
+nmap("<F9>", ":set hlsearch!<cr>", "toggle highlight")
+nmap("<esc>", "A", "instant insert end of line")
+nmap(",", "caw", "instant change all word")
 
 -- NAVIGATE BUFFERS
-nmap("<S-h>", ":bnext<CR>", 'next buffer')
-nmap("<S-l>", ":bprevious<CR>", 'previous buffer')
-nmap("<F6>", "l", 'right window')
-nmap("<F5>", "k", 'up window')
-nmap("<F10>", "h", 'left window')
-nmap("<F4>", "j", 'down window')
+nmap("<S-h>", ":bnext<CR>", "next buffer")
+nmap("<S-l>", ":bprevious<CR>", "previous buffer")
+nmap("<F6>", "l", "right window")
+nmap("<F5>", "k", "up window")
+nmap("<F10>", "h", "left window")
+nmap("<F4>", "j", "down window")
 
 -- Resize with arrows
-nmap("<C-Up>", "<cmd>resize -2<CR>", 'resize up')
-nmap("<C-Down>", "<cmd>resize +2<CR>", 'resize down')
-nmap("<C-Left>", "<cmd>vertical resize -2<CR>", 'resize left')
-nmap("<C-Right>", "<cmd>vertical resize +2<CR>", 'resize right')
+nmap("<C-Up>", "<cmd>resize -2<CR>", "resize up")
+nmap("<C-Down>", "<cmd>resize +2<CR>", "resize down")
+nmap("<C-Left>", "<cmd>vertical resize -2<CR>", "resize left")
+nmap("<C-Right>", "<cmd>vertical resize +2<CR>", "resize right")
 
 -- DAD-BOD
-nmap("<leader>dd", "<cmd>DBUI<cr>", 'dadbod ui')
-nmap("<leader>da", "<cmd>DBUIAddConnection<cr>", 'dadbod add connection')
-nmap("<leader>db", "<cmd>DB<cr>", 'dadbod')
-nmap("<leader>dc", "<cmd>DBUIClose<cr>", 'dadbod close')
+nmap("<leader>dd", "<cmd>DBUI<cr>", "dadbod ui")
+nmap("<leader>da", "<cmd>DBUIAddConnection<cr>", "dadbod add connection")
+nmap("<leader>db", "<cmd>DB<cr>", "dadbod")
+nmap("<leader>dc", "<cmd>DBUIClose<cr>", "dadbod close")
 
 --Chatgpt
 --keymap("n", "<leader>c", ":ChatGPTRunCustomCodeAction<cr>", opts)
-nmap("<C-e>", "<cmd>ChatGPT<cr>", 'chatgpt')
-vmap("<C-e>", "<cmd>ChatGPTRun explain_code<cr>", 'chatgpt explain')
-vmap("<C-f>", "<cmd>ChatGPTRun fix_bugs<cr>", 'chatgpt fix code')
-vmap("<C-t>", "<cmd>ChatGPTRun add_tests<cr>", 'chatgpt run tests')
+nmap("<C-e>", "<cmd>ChatGPT<cr>", "chatgpt")
+vmap("<C-e>", "<cmd>ChatGPTRun explain_code<cr>", "chatgpt explain")
+vmap("<C-f>", "<cmd>ChatGPTRun fix_bugs<cr>", "chatgpt fix code")
+vmap("<C-t>", "<cmd>ChatGPTRun add_tests<cr>", "chatgpt run tests")
 
 -- checkhealth
-nmap("+", "<cmd>checkhealth<cr>", 'check health')
+nmap("+", "<cmd>checkhealth<cr>", "check health")
+
+-- CONFIG CLEANER
+nmap("<leader>m", "<cmd>g/##/d<cr><cmd>%s/# //<cr><cmd>g/#/d<cr><cmd>g/^$/d<cr>", "config cleaner")
 
 --TELESCOPE FUNCTIONS
-nmap("<leader><leader>?", "<cmd>Telescope help_tags theme=ivy<cr>",'Telescope help tags')
-nmap("<leader><leader>tr", "<cmd>Telescope registers theme=ivy<cr>",'Telescope registers')
-nmap("<leader><leader>f", "<cmd>Telescope find_files theme=ivy<cr>",'Telescope find_files')
-nmap("<Up>", "<cmd>Telescope live_grep theme=ivy<cr>",'Telescope live_grep')
-nmap("<leader><leader>gr", "<cmd>Telescope lsp_references theme=ivy<cr>",'Telescope lsp_references')
-nmap("<leader><leader>gd", "<cmd>Telescope lsp_definitions<cr>",'Telescope lsp definitions')
-nmap("<leader><leader>lr", "<cmd>lua vim.lsp.buf.rename()<cr>", 'Telescope rename')
-nmap("<leader><leader>th", "<cmd>Telescope harpoon marks<cr>", 'Telesecope harpoon')
+nmap("<leader><leader>?", "<cmd>Telescope help_tags theme=ivy<cr>", "Telescope help tags")
+nmap("<leader><leader>tr", "<cmd>Telescope registers theme=ivy<cr>", "Telescope registers")
+nmap("<leader><leader>f", "<cmd>Telescope find_files theme=ivy<cr>", "Telescope find_files")
+nmap("<Up>", "<cmd>Telescope live_grep theme=ivy<cr>", "Telescope live_grep")
+nmap("<leader><leader>gr", "<cmd>Telescope lsp_references theme=ivy<cr>", "Telescope lsp_references")
+nmap("<leader><leader>gd", "<cmd>Telescope lsp_definitions<cr>", "Telescope lsp definitions")
+nmap("<leader><leader>lr", "<cmd>lua vim.lsp.buf.rename()<cr>", "Telescope rename")
+nmap("<leader><leader>th", "<cmd>Telescope harpoon marks<cr>", "Telesecope harpoon")
 
 
 
@@ -115,7 +117,8 @@ _G.Config.leader_group_clues = {
   { mode = 'n', keys = '<Leader>m', desc = '+Map' },
   { mode = 'n', keys = '<Leader>o', desc = '+Other' },
   { mode = 'n', keys = '<Leader>s', desc = '+Session' },
-  { mode = 'n', keys = '<Leader>t', desc = '+Terminal' },
+  { mode = 'n', keys = '<Leader>t', desc = '+Terraform' },
+  { mode = 'n', keys = '<Leader>T', desc = '+Terminal' },
   { mode = 'n', keys = '<Leader>u', desc = '+UI/Toggle' },
   { mode = 'n', keys = '<Leader>v', desc = '+Visits' },
 
@@ -283,9 +286,15 @@ nmap_leader('sn', '<Cmd>lua ' .. session_new .. '<CR>',         'New')
 nmap_leader('sr', '<Cmd>lua MiniSessions.select("read")<CR>',   'Read')
 nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',          'Write current')
 
--- t is for 'Terminal'
-nmap_leader('tT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')
-nmap_leader('tt', '<Cmd>vertical term<CR>',   'Terminal (vertical)')
+-- t is for 'Terraform'
+nmap_leader('tp', '<Cmd>TerraformPlan<CR>',      'Terraform plan target')
+nmap_leader('ta', '<Cmd>TerraformApply<CR>',     'Terraform apply target + tags')
+nmap_leader('TA', '<Cmd>TerraformApplyAll<CR>',  'Terraform apply all + tags')
+nmap_leader('Tv', '<Cmd>TerraformValidate<CR>', 'Terraform validate')
+
+-- T is for 'Terminal'
+nmap_leader('TT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')
+nmap_leader('Tt', '<Cmd>vertical term<CR>',   'Terminal (vertical)')
 
 -- u is for 'UI/Toggle'. Common usage:
 -- - `<Leader>uf` - toggle auto-format globally
