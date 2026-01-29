@@ -287,10 +287,12 @@ nmap_leader('sr', '<Cmd>lua MiniSessions.select("read")<CR>',   'Read')
 nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',          'Write current')
 
 -- t is for 'Terraform'
-nmap_leader('tp', '<Cmd>TerraformPlan<CR>',      'Terraform plan target')
-nmap_leader('ta', '<Cmd>TerraformApply<CR>',     'Terraform apply target + tags')
-nmap_leader('TA', '<Cmd>TerraformApplyAll<CR>',  'Terraform apply all + tags')
-nmap_leader('Tv', '<Cmd>TerraformValidate<CR>', 'Terraform validate')
+nmap_leader('tp',  '<Cmd>TerraformPlan<CR>',        'Terraform plan target')
+nmap_leader('ta',  '<Cmd>TerraformApply<CR>',       'Terraform apply target + tags')
+nmap_leader('tmp', '<Cmd>TerraformModulePlan<CR>',  'Terraform module plan (DEBUG)')
+nmap_leader('tma', '<Cmd>TerraformModuleApply<CR>', 'Terraform module apply (DEBUG)')
+nmap_leader('TA',  '<Cmd>TerraformApplyAll<CR>',    'Terraform apply all + tags')
+nmap_leader('Tv',  '<Cmd>TerraformValidate<CR>',    'Terraform validate')
 
 -- T is for 'Terminal'
 nmap_leader('TT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')

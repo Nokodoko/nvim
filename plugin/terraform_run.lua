@@ -18,3 +18,11 @@ end, { desc = 'Run terraform apply -auto-approve + tagging' })
 vim.api.nvim_create_user_command('TerraformValidate', function()
   M.run_terraform_validate()
 end, { desc = 'Run terraform validate' })
+
+vim.api.nvim_create_user_command('TerraformModulePlan', function()
+  M.run_terraform_module('plan')
+end, { desc = 'Run terraform plan on module at cursor (DEBUG)' })
+
+vim.api.nvim_create_user_command('TerraformModuleApply', function()
+  M.run_terraform_module('apply')
+end, { desc = 'Run terraform apply on module at cursor (DEBUG)' })
