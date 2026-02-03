@@ -18,6 +18,6 @@ end, {
 vim.api.nvim_create_autocmd('VimEnter', {
   once = true,
   callback = function()
-    vim.keymap.set('v', '!', ':<C-u>ZellijRun bash<CR>', { desc = 'Run in Zellij floating pane' })
+    vim.keymap.set('v', '!', ':<C-u>ZellijRun zsh<CR>', { desc = 'Run in Zellij floating pane' })
   end,
 })
