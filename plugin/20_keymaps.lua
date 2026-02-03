@@ -291,8 +291,19 @@ nmap_leader('tp',  '<Cmd>TerraformPlan<CR>',        'Terraform plan target')
 nmap_leader('ta',  '<Cmd>TerraformApply<CR>',       'Terraform apply target + tags')
 nmap_leader('tmp', '<Cmd>TerraformModulePlan<CR>',  'Terraform module plan (DEBUG)')
 nmap_leader('tma', '<Cmd>TerraformModuleApply<CR>', 'Terraform module apply (DEBUG)')
-nmap_leader('TA',  '<Cmd>TerraformApplyAll<CR>',    'Terraform apply all + tags')
-nmap_leader('Tv',  '<Cmd>TerraformValidate<CR>',    'Terraform validate')
+nmap_leader('tA',  '<Cmd>TerraformApplyAll<CR>',    'Terraform apply all + tags')
+nmap_leader('tv',  '<Cmd>TerraformValidate<CR>',    'Terraform validate')
+nmap_leader('td',  function() require('terraform_docs').lookup() end,    '[T]erraform [D]ocs')
+nmap_leader('tm',  function() require('terraform_modules').search() end, '[T]erraform [M]odules')
+
+-- gK - Smart docs lookup (Terraform = registry docs, else = LSP hover)
+vim.keymap.set('n', 'gK', function()
+  if vim.bo.filetype == 'terraform' then
+    require('terraform_docs').lookup()
+  else
+    vim.lsp.buf.hover()
+  end
+end, { desc = 'Smart docs lookup' })
 
 -- T is for 'Terminal'
 nmap_leader('TT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')

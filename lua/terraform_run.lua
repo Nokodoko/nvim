@@ -43,9 +43,9 @@ function M.run_terraform(action)
   end
 
   -- Build zellij command with top-right positioning (matching zellij_run.lua pattern)
-  -- Use bash -ic to source .bashrc and pick up env vars (API keys, etc.)
+  -- Use zsh -lic to source .bashrc and pick up env vars (API keys, etc.)
   local zellij_cmd = string.format(
-    'zellij run --floating --x 50%% --y 0 --width 50%% --height 70%% -- bash -ic %q',
+    'zellij run --floating --x 50%% --y 0 --width 50%% --height 70%% -- zsh -lic %q',
     terraform_cmd
   )
 
@@ -125,14 +125,14 @@ function M.run_terraform_module(action)
   end
 
   -- Build zellij command with top-right positioning (matching run_terraform pattern)
-  -- Use bash -ic to source .bashrc and pick up env vars (API keys, etc.)
   local zellij_cmd = string.format(
-    'zellij run --floating --x 50%% --y 0 --width 50%% --height 70%% -- bash -ic %q',
+    'zellij run --floating --x 50%% --y 0 --width 50%% --height 70%% -- zsh -lic %q',
     terraform_cmd
   )
 
-  -- Run asynchronously using jobstart
+  -- Run asynchronously using jobstart, passing current environment
   vim.fn.jobstart(zellij_cmd, {
+    env = vim.fn.environ(),
     on_exit = function(_, exit_code)
       if exit_code ~= 0 then
         vim.schedule(function()
@@ -150,9 +150,9 @@ function M.run_terraform_all()
   local terraform_cmd = 'terraform apply -auto-approve && ./add_tags/caller.py append'
 
   -- Build zellij command with top-right positioning (matching zellij_run.lua pattern)
-  -- Use bash -ic to source .bashrc and pick up env vars (API keys, etc.)
+  -- Use zsh -lic to source .bashrc and pick up env vars (API keys, etc.)
   local zellij_cmd = string.format(
-    'zellij run --floating --x 50%% --y 0 --width 50%% --height 70%% -- bash -ic %q',
+    'zellij run --floating --x 50%% --y 0 --width 50%% --height 70%% -- zsh -lic %q',
     terraform_cmd
   )
 
