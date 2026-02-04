@@ -7,7 +7,8 @@
       "Have a look at this implementation plan, and I want you to create different tracks. Have a look at any phases or tasks that can be implemented in parallel. Find any phases or tasks that do not have a dependency on each other, and then create different tracks.",
       "Then for each track, kick off a unix-coder to implement the changes for that track. You need to use the unix-coder for this. Once the coding agent completes its work, you need to hand over the solution to the code-review agent and then let the code-review agent provide feedback back to the unix-coder.",
       "The cycle should continue until all changes have been fully implemented.",
-      "Again, I do not want you to implement anything yourself. You need to keep your context window as lean as possible. Coordinate all the different efforts between the tracks, the unix-coder, and code-review agents."
+      "Again, I do not want you to implement anything yourself. You need to keep your context window as lean as possible. Coordinate all the different efforts between the tracks, the unix-coder, and code-review agents.",
+      "Be sure to create a separate worktree per feature that is being worked on to avoid merge conflicts, and ensure that any and all merge conflicts are managed so no work is lost."
     ],
     "description": "Insert orchestrator system prompt for multi-agent coordination"
   },
