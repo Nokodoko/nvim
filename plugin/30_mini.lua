@@ -799,15 +799,15 @@ later(function()
       snippets.gen_loader.from_file(config_path .. '/snippets/global.json'),
       -- Load from 'snippets/' directory of plugins, like 'friendly-snippets'
       snippets.gen_loader.from_lang({ lang_patterns = lang_patterns }),
+      -- Load filetype-specific snippets from 'after/snippets/' directory
+      snippets.gen_loader.from_lang({ path = config_path .. '/after/snippets' }),
     },
     -- Disable default <C-j> expand mapping (use Tab or custom mapping instead)
     mappings = { expand = '', jump_next = '', jump_prev = '' },
   })
 
-  -- By default snippets available at cursor are not shown as candidates in
-  -- 'mini.completion' menu. This requires a dedicated in-process LSP server
-  -- that will provide them. To have that, uncomment next line (use `gcc`).
-  -- MiniSnippets.start_lsp_server()
+  -- Start LSP server to show snippets in mini.completion menu
+  snippets.start_lsp_server()
 end)
 
 -- Split and join arguments (regions inside brackets between allowed separators).
