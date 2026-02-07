@@ -55,6 +55,8 @@ now_if_args(function()
     'yaml',
     'json',
     'bash',
+    'javascript',
+    'typescript',
     -- Add here more languages with which you want to use tree-sitter
     -- To see available languages:
     -- - Execute `:=require('nvim-treesitter').get_available()`
@@ -201,6 +203,37 @@ local pluglist = {
 for _, plugin in ipairs(pluglist) do 
   later(function() add(plugin) end)
 end
+
+-- Neo-tree ==================================================================
+
+-- File tree explorer sidebar. Requires plenary.nvim and nui.nvim (already
+-- in pluglist above). nvim-web-devicons provides file icons.
+later(function()
+  add('nvim-tree/nvim-web-devicons')
+  add({
+    source = 'nvim-neo-tree/neo-tree.nvim',
+    checkout = 'v3.x',
+  })
+
+  require('neo-tree').setup({
+    close_if_last_window = true,
+    filesystem = {
+      follow_current_file = { enabled = true },
+      hijack_netrw_behavior = 'open_current',
+      filtered_items = {
+        visible = true,
+        hide_dotfiles = false,
+        hide_gitignored = false,
+      },
+    },
+    window = {
+      width = 35,
+      mappings = {
+        ['<space>'] = 'none',
+      },
+    },
+  })
+end)
 
 -- honorable mentions =========================================================
 

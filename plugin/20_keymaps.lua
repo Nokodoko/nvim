@@ -171,6 +171,7 @@ local explore_quickfix = function()
   vim.cmd('copen')
 end
 
+nmap_leader('e',  '<Cmd>Neotree toggle<CR>',                'Neo-tree toggle')
 nmap_leader('ed', '<Cmd>lua MiniFiles.open()<CR>',          'Directory')
 nmap_leader('ef', explore_at_file,                          'File directory')
 nmap_leader('ei', '<Cmd>edit $MYVIMRC<CR>',                 'init.lua')

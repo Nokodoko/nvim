@@ -130,7 +130,7 @@ vim.lsp.config('bashls', {
   root_markers = { '.git' },
 })
 
--- 3. BASH LANGUAGE SERVER (bashls)
+-- 4. PYTHON LANGUAGE SERVER (basedpyright)
 vim.lsp.enable('basedpyright')
 vim.lsp.config('basedpyright', {
   cmd = { 'basedpyright-langserver', '--stdio' },
@@ -176,4 +176,28 @@ vim.lsp.config('basedpyright', {
       complete = 'file',
     })
   end,
+})
+
+-- 5. JAVASCRIPT/TYPESCRIPT LANGUAGE SERVER (ts_ls)
+vim.lsp.enable('ts_ls')
+vim.lsp.config('ts_ls', {
+  cmd = { 'typescript-language-server', '--stdio' },
+  filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
+  root_markers = { 'tsconfig.json', 'jsconfig.json', 'package.json', '.git' },
+  settings = {
+    typescript = {
+      inlayHints = {
+        includeInlayParameterNameHints = 'all',
+        includeInlayFunctionParameterTypeHints = true,
+        includeInlayVariableTypeHints = true,
+      },
+    },
+    javascript = {
+      inlayHints = {
+        includeInlayParameterNameHints = 'all',
+        includeInlayFunctionParameterTypeHints = true,
+        includeInlayVariableTypeHints = true,
+      },
+    },
+  },
 })
