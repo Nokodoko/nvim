@@ -134,5 +134,10 @@
       "- Document everything"
     ],
     "description": "Insert SRE profile with observability focus"
+  },
+  "Start Command": {
+    "prefix": "start",
+    "body": "create .claude/commands/start.md with \"sh ./scripts/start.sh 300s\"",
+    "description": "Insert start command for .claude/commands/start.md"
   }
 }
