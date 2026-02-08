@@ -100,6 +100,9 @@ local function write_oauth_credentials(oauth_data)
   file:write(vim.json.encode(data))
   file:close()
 
+  -- Ensure credentials file stays private
+  vim.fn.setfperm(cred_path, 'rw-------')
+
   return true, nil
 end
 
