@@ -65,18 +65,41 @@ local function show_response(response_text)
   end, { buffer = buf, nowait = true })
 end
 
--- Internal helper to prompt Claude with or without selection
-local function prompt_internal(include_selection)
+-- Internal helper to open floating prompt buffer
+local function open_prompt(include_selection)
   -- Pre-validation
   if api.is_busy() then
     vim.notify('Claude is already processing a request', vim.log.levels.WARN)
     return
   end
 
-  local prompt_text = include_selection and 'Claude (with selection): ' or 'Claude: '
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].buftype = 'nofile'
+  vim.bo[buf].filetype = 'claude_prompt_input'
 
-  vim.ui.input({ prompt = prompt_text }, function(input)
-    if not input or input == '' then return end
+  local width = math.min(60, vim.o.columns - 4)
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = 'cursor',
+    width = width,
+    height = 1,
+    row = 1,
+    col = 0,
+    style = 'minimal',
+    border = 'rounded',
+    title = ' Ask Claude (' .. api.get_model_name() .. ') ',
+    title_pos = 'center',
+  })
+
+  vim.cmd('startinsert')
+
+  -- Submit on Enter
+  vim.keymap.set('i', '<CR>', function()
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local input = table.concat(lines, ' ')
+    vim.cmd('stopinsert')
+    vim.api.nvim_win_close(win, true)
+
+    if input == '' then return end
 
     local ctx = context.gather({
       include_file = true,
@@ -100,17 +123,23 @@ local function prompt_internal(include_selection)
         vim.notify('Claude returned an empty response', vim.log.levels.ERROR)
       end
     end)
-  end)
+  end, { buffer = buf, nowait = true })
+
+  -- Cancel on Esc
+  vim.keymap.set('i', '<Esc>', function()
+    vim.cmd('stopinsert')
+    vim.api.nvim_win_close(win, true)
+  end, { buffer = buf, nowait = true })
 end
 
 -- Main prompt function - prompts Claude with current buffer context
 function M.prompt()
-  prompt_internal(false)
+  open_prompt(false)
 end
 
 -- Prompt with visual selection context
 function M.prompt_visual()
-  prompt_internal(true)
+  open_prompt(true)
 end
 
 -- Cancel in-flight request
