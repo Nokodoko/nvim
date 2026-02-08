@@ -581,9 +581,9 @@ later(function() require('mini.jump2d').setup() end)
 -- - `:h MiniKeymap.map_combo()` - map combo
 later(function()
   require('mini.keymap').setup()
-  -- Navigate 'mini.completion' menu with `<Tab>` /  `<S-Tab>` or `<C-j>` / `<C-k>`
-  MiniKeymap.map_multistep('i', '<Tab>', { 'pmenu_next' })
-  MiniKeymap.map_multistep('i', '<S-Tab>', { 'pmenu_prev' })
+  -- Tab/S-Tab: snippet navigation > snippet expand > completion menu navigation
+  MiniKeymap.map_multistep('i', '<Tab>', { 'minisnippets_next', 'minisnippets_expand', 'pmenu_next' })
+  MiniKeymap.map_multistep('i', '<S-Tab>', { 'minisnippets_prev', 'pmenu_prev' })
   MiniKeymap.map_multistep('i', '<C-k>', { 'pmenu_prev' })
   -- <C-j>: pmenu navigation when visible, otherwise do nothing (snippets disabled on this key)
   vim.keymap.set('i', '<C-j>', function()
