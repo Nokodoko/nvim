@@ -77,6 +77,8 @@ end
 
 -- Main request function
 function M.request(prompt, context, callback)
+  context = context or {}
+
   -- Check for API key
   local api_key = vim.env.ANTHROPIC_API_KEY
   if not api_key or api_key == '' then
@@ -101,6 +103,8 @@ function M.request(prompt, context, callback)
   -- Build curl command
   local cmd = {
     'curl', '-s',
+    '--max-time', '30',
+    '--connect-timeout', '10',
     '-X', 'POST',
     'https://api.anthropic.com/v1/messages',
     '-H', 'Content-Type: application/json',
@@ -114,7 +118,7 @@ function M.request(prompt, context, callback)
   local stderr_chunks = {}
 
   -- Start job
-  current_job_id = vim.fn.jobstart(cmd, {
+  local job_id = vim.fn.jobstart(cmd, {
     stdout_buffered = true,
     stderr_buffered = true,
 
@@ -139,9 +143,8 @@ function M.request(prompt, context, callback)
     end,
 
     on_exit = function(_, exit_code)
-      current_job_id = nil
-
       vim.schedule(function()
+        current_job_id = nil
         -- Handle curl errors
         if exit_code ~= 0 then
           local error_msg = 'curl request failed (exit ' .. exit_code .. ')'
@@ -169,8 +172,13 @@ function M.request(prompt, context, callback)
         end
 
         -- Extract text content from response
-        if response.content and #response.content > 0 and response.content[1].text then
-          callback(response.content[1].text, nil)
+        if response.content and #response.content > 0 then
+          local first_content = response.content[1]
+          if first_content.type == 'text' and first_content.text then
+            callback(first_content.text, nil)
+          else
+            callback(nil, 'Empty or non-text response from API')
+          end
         else
           callback(nil, 'Unexpected API response format')
         end
@@ -179,13 +187,15 @@ function M.request(prompt, context, callback)
   })
 
   -- Handle jobstart failure
-  if current_job_id == 0 then
-    current_job_id = nil
+  if job_id == 0 then
     callback(nil, 'Invalid job arguments')
-  elseif current_job_id == -1 then
-    current_job_id = nil
+    return
+  elseif job_id == -1 then
     callback(nil, 'curl command not executable')
+    return
   end
+
+  current_job_id = job_id
 end
 
 return M
