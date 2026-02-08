@@ -23,6 +23,22 @@ end, {
   desc = 'Cancel in-flight Claude request',
 })
 
+vim.api.nvim_create_user_command('ClaudeModel', function()
+  local api = require('claude_prompt.api')
+  vim.ui.select(
+    vim.tbl_map(function(m) return m.name end, api.models),
+    { prompt = 'Select model: ' },
+    function(choice, idx)
+      if idx then
+        api.set_model(api.models[idx].id)
+        vim.notify('Model set to: ' .. api.models[idx].name, vim.log.levels.INFO)
+      end
+    end
+  )
+end, {
+  desc = 'Select Claude model',
+})
+
 -- Add leader group clue for AI commands
 table.insert(_G.Config.leader_group_clues, { mode = 'n', keys = '<Leader>a', desc = '+AI' })
 table.insert(_G.Config.leader_group_clues, { mode = 'x', keys = '<Leader>a', desc = '+AI' })
@@ -43,3 +59,6 @@ xmap_leader('ap', ':<C-u>ClaudePromptVisual<CR>', 'Prompt with selection')
 
 -- Cancel request (normal mode only)
 nmap_leader('ac', '<Cmd>ClaudeCancel<CR>', 'Cancel request')
+
+-- Select model (normal mode only)
+nmap_leader('am', '<Cmd>ClaudeModel<CR>', 'Select model')

@@ -33,7 +33,7 @@ local function show_response(response_text)
     col = 0,
     style = 'minimal',
     border = 'rounded',
-    title = ' Claude ',
+    title = ' Claude (' .. api.get_model_name() .. ') ',
     title_pos = 'center',
   })
 
@@ -49,16 +49,25 @@ local function show_response(response_text)
     vim.fn.setreg('+', response_text)
     vim.notify('Claude response copied to clipboard', vim.log.levels.INFO)
   end, { buffer = buf, nowait = true })
+
+  -- Model selection with m
+  vim.keymap.set('n', 'm', function()
+    vim.ui.select(
+      vim.tbl_map(function(m) return m.name end, api.models),
+      { prompt = 'Select model: ' },
+      function(choice, idx)
+        if idx then
+          api.set_model(api.models[idx].id)
+          vim.notify('Model set to: ' .. api.models[idx].name, vim.log.levels.INFO)
+        end
+      end
+    )
+  end, { buffer = buf, nowait = true })
 end
 
 -- Internal helper to prompt Claude with or without selection
 local function prompt_internal(include_selection)
   -- Pre-validation
-  if not vim.env.ANTHROPIC_API_KEY or vim.env.ANTHROPIC_API_KEY == '' then
-    vim.notify('ANTHROPIC_API_KEY environment variable not set', vim.log.levels.ERROR)
-    return
-  end
-
   if api.is_busy() then
     vim.notify('Claude is already processing a request', vim.log.levels.WARN)
     return
