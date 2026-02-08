@@ -13,7 +13,6 @@ end, {
 vim.api.nvim_create_user_command('ClaudePromptVisual', function()
   claude.prompt_visual()
 end, {
-  range = true,
   desc = 'Prompt Claude with visual selection',
 })
 
