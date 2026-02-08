@@ -6,6 +6,7 @@ local M = {}
 -- @return table { filepath, filetype, content, line_count }
 function M.get_buffer_context(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(bufnr) then return {} end
 
   local filepath = vim.api.nvim_buf_get_name(bufnr)
   local filetype = vim.bo[bufnr].filetype
@@ -196,6 +197,8 @@ end
 function M.gather(opts)
   opts = opts or {}
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(bufnr) then return {} end
+
   local include_file = opts.include_file ~= false
   local include_cursor = opts.include_cursor ~= false
   local include_treesitter = opts.include_treesitter ~= false
@@ -204,42 +207,39 @@ function M.gather(opts)
 
   local context = {}
 
-  -- Buffer context
+  -- Buffer context (flatten into top-level fields)
   if include_file then
-    context.buffer = M.get_buffer_context(bufnr)
+    local buf = M.get_buffer_context(bufnr)
+    context.filepath = buf.filepath
+    context.filetype = buf.filetype
+    context.buffer_content = buf.content
+    context.line_count = buf.line_count
   end
 
   -- Cursor context
   if include_cursor then
     local cursor = vim.api.nvim_win_get_cursor(0)
-    local line, col = cursor[1], cursor[2]
-    context.cursor = M.get_cursor_context(bufnr, line, col)
+    context.cursor_line = cursor[1]
+    context.cursor_context = M.get_cursor_context(bufnr, cursor[1], cursor[2])
   end
 
-  -- Visual selection
+  -- Visual selection - always attempt if requested (don't check mode, it's already exited)
   if include_selection then
-    local mode = vim.api.nvim_get_mode().mode
-    if mode:match('[vV]') then
-      context.selection = M.get_visual_selection()
-    end
+    context.selection = M.get_visual_selection()
   end
 
   -- Treesitter node
   if include_treesitter then
     local cursor = vim.api.nvim_win_get_cursor(0)
-    local line, col = cursor[1], cursor[2]
-    local node = M.get_treesitter_node(bufnr, line, col)
+    local node = M.get_treesitter_node(bufnr, cursor[1], cursor[2])
     if node then
-      context.treesitter = node
+      context.treesitter_node = node
     end
   end
 
   -- LSP symbols
   if include_symbols then
-    local symbols = M.get_lsp_symbols(bufnr)
-    if symbols then
-      context.symbols = symbols
-    end
+    context.symbols = M.get_lsp_symbols(bufnr)
   end
 
   return context
@@ -252,16 +252,17 @@ function M.format_for_prompt(context)
   local lines = {}
 
   -- File info
-  if context.buffer then
-    local buf = context.buffer
-    local filepath = buf.filepath ~= '' and buf.filepath or '[No Name]'
-    table.insert(lines, string.format('File: %s (%s)', filepath, buf.filetype))
-    table.insert(lines, string.format('Lines: %d', buf.line_count))
+  if context.filepath then
+    local filepath = context.filepath ~= '' and context.filepath or '[No Name]'
+    table.insert(lines, string.format('File: %s (%s)', filepath, context.filetype or ''))
+  end
+  if context.line_count then
+    table.insert(lines, string.format('Lines: %d', context.line_count))
   end
 
   -- Current function/class
-  if context.treesitter then
-    local ts = context.treesitter
+  if context.treesitter_node then
+    local ts = context.treesitter_node
     local name = ts.name or 'anonymous'
     table.insert(
       lines,
@@ -270,8 +271,8 @@ function M.format_for_prompt(context)
   end
 
   -- Cursor position
-  if context.cursor then
-    table.insert(lines, string.format('Cursor at line: %d', context.cursor.cursor_line))
+  if context.cursor_line then
+    table.insert(lines, string.format('Cursor at line: %d', context.cursor_line))
   end
 
   -- Visual selection
@@ -289,19 +290,19 @@ function M.format_for_prompt(context)
   end
 
   -- Cursor context
-  if context.cursor then
+  if context.cursor_context then
     table.insert(lines, '\n--- Context Around Cursor ---')
     table.insert(
       lines,
-      string.format('(lines %d-%d)', context.cursor.start_line, context.cursor.end_line)
+      string.format('(lines %d-%d)', context.cursor_context.start_line, context.cursor_context.end_line)
     )
-    table.insert(lines, context.cursor.text)
+    table.insert(lines, context.cursor_context.text)
   end
 
   -- Full file content
-  if context.buffer and context.buffer.content then
+  if context.buffer_content then
     table.insert(lines, '\n--- File Content ---')
-    table.insert(lines, context.buffer.content)
+    table.insert(lines, context.buffer_content)
   end
 
   return table.concat(lines, '\n')
