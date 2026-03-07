@@ -535,5 +535,23 @@
       "$0"
     ],
     "description": "Insert team prompt template with team member assignments"
+  },
+  "Feature Request": {
+    "prefix": "feature_request",
+    "body": [
+      "# Feature Request: $1",
+      "",
+      "## Summary",
+      "",
+      "## Workflow",
+      "",
+      "## Implementation Details",
+      "",
+      "## Considerations",
+      "",
+      "<!-- # Outputs -->",
+      "$0"
+    ],
+    "description": "Insert feature request template"
   }
 }
