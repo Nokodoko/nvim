@@ -200,9 +200,27 @@ local pluglist = {
   -- "hrsh7th/nvim-cmp",
 }
 
-for _, plugin in ipairs(pluglist) do 
+for _, plugin in ipairs(pluglist) do
   later(function() add(plugin) end)
 end
+
+-- telescope-cmdr.nvim =======================================================
+-- Telescope pickers for computeCommander: agents, sessions, mail, merge, etc.
+later(function()
+  add({ source = 'nvim-telescope/telescope.nvim' }) -- ensure telescope loaded first
+  local cmdr_plugin = vim.fn.expand('~/Programs/ai/computeCommander/.claude/worktrees/telescope/plugins/telescope-cmdr.nvim')
+  vim.opt.runtimepath:prepend(cmdr_plugin)
+  package.path = cmdr_plugin .. '/lua/?.lua;' .. cmdr_plugin .. '/lua/?/init.lua;' .. package.path
+  require('telescope').load_extension('cmdr')
+  -- telescope-cmdr.nvim keybinds
+  vim.keymap.set('n', '<C-k>', function()
+    require('telescope').extensions.cmdr.commands()
+  end, { desc = 'cmdr: Command Palette' })
+  vim.keymap.set('i', '<C-k>', function()
+    vim.cmd('stopinsert')
+    require('telescope').extensions.cmdr.commands()
+  end, { desc = 'cmdr: Command Palette' })
+end)
 
 -- Neo-tree ==================================================================
 
@@ -339,6 +357,14 @@ later(function()
         ["vim.lsp.util.convert_input_to_markdown_lines"] = false,
         ["vim.lsp.util.stylize_markdown"] = false,
         ["cmp.entry.get_documentation"] = false,
+      },
+    },
+    views = {
+      cmdline_input = {
+        relative = "cursor",
+        position = { row = 1, col = 0 },
+        size = { width = 60 },
+        border = { style = "single" },
       },
     },
     routes = {

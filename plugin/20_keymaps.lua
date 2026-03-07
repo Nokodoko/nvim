@@ -152,6 +152,7 @@ nmap_leader('bD', '<Cmd>lua MiniBufremove.delete(0, true)<CR>',  'Delete!')
 nmap_leader('bs', new_scratch_buffer,                            'Scratch')
 nmap_leader('bw', '<Cmd>lua MiniBufremove.wipeout()<CR>',        'Wipeout')
 nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
+nmap_leader( 'x', '<Cmd>lua MiniBufremove.delete()<CR>',        'Close tab')
 nmap_leader( 'w', '<cmd>VimwikiIndex<cr>', 'vimwiki')
 
 
