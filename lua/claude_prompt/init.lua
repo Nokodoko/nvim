@@ -9,97 +9,25 @@ function M.setup(opts)
   api.setup(opts)
 end
 
--- Internal helper to show Claude response in a floating window
-local function show_response(response_text)
+-- Insert response text directly into buffer after cursor line
+local function insert_response(target_buf, target_line, response_text)
   local lines = vim.split(response_text, '\n', { plain = true })
-
-  -- Create scratch buffer with response content
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].filetype = 'markdown'
-  vim.bo[buf].bufhidden = 'wipe'
-  vim.bo[buf].modifiable = false
-
-  -- Calculate window size
-  local width = math.min(80, vim.o.columns - 4)
-  local height = math.min(#lines + 2, vim.o.lines - 4)
-
-  -- Open floating window
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'cursor',
-    width = width,
-    height = height,
-    row = 1,
-    col = 0,
-    style = 'minimal',
-    border = 'rounded',
-    title = ' Claude (' .. api.get_model_name() .. ') ',
-    title_pos = 'center',
-  })
-
-  vim.wo[win].wrap = true
-  vim.wo[win].linebreak = true
-
-  -- Close with q or Esc
-  vim.keymap.set('n', 'q', '<Cmd>close<CR>', { buffer = buf, nowait = true })
-  vim.keymap.set('n', '<Esc>', '<Cmd>close<CR>', { buffer = buf, nowait = true })
-
-  -- Yank response with y
-  vim.keymap.set('n', 'y', function()
-    vim.fn.setreg('+', response_text)
-    vim.notify('Claude response copied to clipboard', vim.log.levels.INFO)
-  end, { buffer = buf, nowait = true })
-
-  -- Model selection with m
-  vim.keymap.set('n', 'm', function()
-    vim.ui.select(
-      vim.tbl_map(function(m) return m.name end, api.models),
-      { prompt = 'Select model: ' },
-      function(choice, idx)
-        if idx then
-          api.set_model(api.models[idx].id)
-          vim.notify('Model set to: ' .. api.models[idx].name, vim.log.levels.INFO)
-        end
-      end
-    )
-  end, { buffer = buf, nowait = true })
+  vim.api.nvim_buf_set_lines(target_buf, target_line, target_line, false, lines)
 end
 
--- Internal helper to open floating prompt buffer
+-- Internal helper to prompt via vim.ui.input (rendered by noice at cursor)
 local function open_prompt(include_selection)
-  -- Pre-validation
   if api.is_busy() then
     vim.notify('Claude is already processing a request', vim.log.levels.WARN)
     return
   end
 
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[buf].buftype = 'nofile'
-  vim.bo[buf].filetype = 'claude_prompt_input'
+  -- Save original buffer and cursor before prompt opens
+  local target_buf = vim.api.nvim_get_current_buf()
+  local target_line = vim.api.nvim_win_get_cursor(0)[1]
 
-  local width = math.min(60, vim.o.columns - 4)
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'cursor',
-    width = width,
-    height = 1,
-    row = 1,
-    col = 0,
-    style = 'minimal',
-    border = 'rounded',
-    title = ' Ask Claude (' .. api.get_model_name() .. ') ',
-    title_pos = 'center',
-  })
-
-  vim.cmd('startinsert')
-
-  -- Submit on Enter
-  vim.keymap.set('i', '<CR>', function()
-    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    local input = table.concat(lines, ' ')
-    vim.cmd('stopinsert')
-    vim.api.nvim_win_close(win, true)
-
-    if input == '' then return end
+  vim.ui.input({ prompt = api.get_model_name() .. ': ' }, function(input)
+    if not input or input == '' then return end
 
     local ctx = context.gather({
       include_file = true,
@@ -118,18 +46,12 @@ local function open_prompt(include_selection)
       end
 
       if response_text and response_text ~= '' then
-        show_response(response_text)
+        insert_response(target_buf, target_line, response_text)
       else
         vim.notify('Claude returned an empty response', vim.log.levels.ERROR)
       end
     end)
-  end, { buffer = buf, nowait = true })
-
-  -- Cancel on Esc
-  vim.keymap.set('i', '<Esc>', function()
-    vim.cmd('stopinsert')
-    vim.api.nvim_win_close(win, true)
-  end, { buffer = buf, nowait = true })
+  end)
 end
 
 -- Main prompt function - prompts Claude with current buffer context
@@ -144,5 +66,131 @@ end
 
 -- Cancel in-flight request
 M.cancel = api.cancel
+
+-- Insert the last Claude Code response into the current buffer
+-- Reads from /tmp/claude_last_response.md (written by Stop hook)
+function M.insert_last_response()
+  local response_file = '/tmp/claude_last_response.md'
+  local meta_file = '/tmp/claude_last_response.meta.json'
+
+  -- Check if response file exists
+  if vim.fn.filereadable(response_file) ~= 1 then
+    vim.notify('No Claude response found. Run a Claude Code prompt first.', vim.log.levels.WARN)
+    return
+  end
+
+  -- Read the response text
+  local lines = vim.fn.readfile(response_file)
+  if #lines == 0 then
+    vim.notify('Claude response file is empty.', vim.log.levels.WARN)
+    return
+  end
+
+  -- Check total character count to detect trivial captures
+  local total_chars = 0
+  for _, line in ipairs(lines) do
+    total_chars = total_chars + #line
+  end
+
+  if total_chars < 200 then
+    -- Warn but still insert -- the user may want it anyway
+    vim.notify(
+      string.format('Warning: response is only %d chars (may be coordination noise)', total_chars),
+      vim.log.levels.WARN
+    )
+  end
+
+  -- Check staleness via metadata (warn if older than 10 minutes)
+  if vim.fn.filereadable(meta_file) == 1 then
+    local meta_raw = table.concat(vim.fn.readfile(meta_file), '')
+    local ok, meta = pcall(vim.fn.json_decode, meta_raw)
+    if ok and meta and meta.timestamp then
+      local age = os.time() - meta.timestamp
+      if age > 600 then
+        local mins = math.floor(age / 60)
+        vim.notify(string.format('Claude response is %d min old', mins), vim.log.levels.INFO)
+      end
+    end
+  end
+
+  -- Insert after the current cursor line
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  vim.api.nvim_buf_set_lines(0, cursor_line, cursor_line, false, lines)
+  vim.notify(string.format('Inserted %d lines from Claude response', #lines), vim.log.levels.INFO)
+end
+
+-- Open telescope picker showing recent Claude responses
+function M.select_response()
+  local history_file = '/tmp/claude_response_history.json'
+
+  if vim.fn.filereadable(history_file) ~= 1 then
+    vim.notify('No Claude response history found.', vim.log.levels.WARN)
+    return
+  end
+
+  local raw = table.concat(vim.fn.readfile(history_file), '')
+  local ok, history = pcall(vim.fn.json_decode, raw)
+  if not ok or not history or #history == 0 then
+    vim.notify('Claude response history is empty.', vim.log.levels.WARN)
+    return
+  end
+
+  local pickers = require('telescope.pickers')
+  local finders = require('telescope.finders')
+  local conf = require('telescope.config').values
+  local actions = require('telescope.actions')
+  local action_state = require('telescope.actions.state')
+  local previewers = require('telescope.previewers')
+
+  pickers
+    .new({}, {
+      prompt_title = 'Claude Responses',
+      finder = finders.new_table({
+        results = history,
+        entry_maker = function(entry)
+          local age = ''
+          if entry.timestamp then
+            local secs = os.time() - entry.timestamp
+            if secs < 60 then
+              age = string.format('%ds ago', secs)
+            elseif secs < 3600 then
+              age = string.format('%dm ago', math.floor(secs / 60))
+            else
+              age = string.format('%dh ago', math.floor(secs / 3600))
+            end
+          end
+          local display = string.format('[%s] %s', age, entry.preview or '(empty)')
+          return {
+            value = entry,
+            display = display,
+            ordinal = entry.preview or '',
+          }
+        end,
+      }),
+      sorter = conf.generic_sorter({}),
+      previewer = previewers.new_buffer_previewer({
+        title = 'Response Preview',
+        define_preview = function(self, entry)
+          local lines = vim.split(entry.value.text or '', '\n', { plain = true })
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          vim.bo[self.state.bufnr].filetype = 'markdown'
+        end,
+      }),
+      attach_mappings = function(prompt_bufnr)
+        actions.select_default:replace(function()
+          actions.close(prompt_bufnr)
+          local selection = action_state.get_selected_entry()
+          if selection and selection.value and selection.value.text then
+            local lines = vim.split(selection.value.text, '\n', { plain = true })
+            local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+            vim.api.nvim_buf_set_lines(0, cursor_line, cursor_line, false, lines)
+            vim.notify(string.format('Inserted %d lines from Claude response', #lines), vim.log.levels.INFO)
+          end
+        end)
+        return true
+      end,
+    })
+    :find()
+end
 
 return M

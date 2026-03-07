@@ -93,33 +93,33 @@ function M.request(prompt, context, callback)
   end
 
   -- Build the system prompt
-  local system_prompt = [[You are a helpful AI coding assistant integrated into Neovim. You have access to the user's codebase context and should provide concise, accurate responses focused on their immediate task.
+  local system_prompt = [[You are a coding assistant embedded in Neovim. Your output is inserted directly into the user's buffer.
 
-When providing code suggestions:
-- Be concise and to the point
-- Match the existing code style
-- Consider the file type and context
-- Provide working, tested solutions when possible]]
+Rules:
+- Output ONLY what was requested — no explanations, no preamble, no commentary
+- Do not wrap output in markdown code fences unless explicitly asked
+- Match the existing code style exactly
+- If asked for code, output only the code
+- If asked a question, answer in the fewest words possible]]
 
   -- Build the user prompt with context
   local user_prompt = M.build_prompt(prompt, context)
 
-  -- Build claude command
+  -- Build claude command (prompt piped via stdin)
   local cmd = {
     'claude',
     '-p',
     '--model', M.config.model,
     '--no-session-persistence',
+    '--permission-mode', 'acceptEdits',
     '--system-prompt', system_prompt,
-    '--allowedTools', '',
-    user_prompt,
   }
 
   -- Collect response chunks
   local stdout_chunks = {}
   local stderr_chunks = {}
 
-  -- Start job
+  -- Start job and write prompt to stdin
   local job_id = vim.fn.jobstart(cmd, {
     stdout_buffered = true,
     stderr_buffered = true,
@@ -180,6 +180,10 @@ When providing code suggestions:
   end
 
   current_job_id = job_id
+
+  -- Send prompt via stdin then close to signal EOF
+  vim.fn.chansend(job_id, user_prompt)
+  vim.fn.chanclose(job_id, 'stdin')
 end
 
 return M

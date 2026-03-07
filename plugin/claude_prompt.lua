@@ -62,3 +62,27 @@ nmap_leader('ac', '<Cmd>ClaudeCancel<CR>', 'Cancel request')
 
 -- Select model (normal mode only)
 nmap_leader('am', '<Cmd>ClaudeModel<CR>', 'Select model')
+
+-- Insert last Claude Code response into buffer
+vim.api.nvim_create_user_command('ClaudeInsertResponse', function()
+  claude.insert_last_response()
+end, {
+  desc = 'Insert last Claude Code response into buffer',
+})
+
+nmap_leader('ai', '<Cmd>ClaudeInsertResponse<CR>', 'Insert last response')
+
+-- Select from recent Claude responses via telescope
+vim.api.nvim_create_user_command('ClaudeSelectResponse', function()
+  claude.select_response()
+end, {
+  desc = 'Select a Claude response from history',
+})
+
+nmap_leader('as', '<Cmd>ClaudeSelectResponse<CR>', 'Select response history')
+
+-- Insert mode: trigger prompt with Ctrl+A
+vim.keymap.set('i', '<C-a>', function()
+  vim.cmd('stopinsert')
+  vim.schedule(function() require('claude_prompt').prompt() end)
+end, { desc = 'Prompt Claude' })
