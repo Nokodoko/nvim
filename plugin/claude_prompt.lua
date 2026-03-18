@@ -81,6 +81,15 @@ end, {
 
 nmap_leader('as', '<Cmd>ClaudeSelectResponse<CR>', 'Select response history')
 
+-- Select from user prompt history via telescope
+vim.api.nvim_create_user_command('ClaudeSelectPrompt', function()
+  claude.select_prompt()
+end, {
+  desc = 'Select a user prompt from history',
+})
+
+nmap_leader('aS', '<Cmd>ClaudeSelectPrompt<CR>', 'Select prompt history')
+
 -- Insert mode: trigger prompt with Ctrl+A
 vim.keymap.set('i', '<C-a>', function()
   vim.cmd('stopinsert')
