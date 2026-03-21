@@ -581,20 +581,32 @@
   "Feature Request": {
     "prefix": "feature_request",
     "body": [
-      "# Feature Request: $1",
+      "# Feature Request: ${1:Title}",
       "",
       "## Summary",
       "",
+      "${2:Brief description of the feature and why it matters.}",
+      "",
       "## Workflow",
+      "<!-- Describe the step-by-step user experience as numbered actions -->",
+      "",
+      "${3:1. }",
       "",
       "## Implementation Details",
+      "<!-- Technical breakdown: file paths, code changes, config, integration points -->",
+      "",
+      "${4:### }",
       "",
       "## Considerations",
+      "<!-- Edge cases, trade-offs, alternatives, dependencies, open questions -->",
+      "",
+      "${5:- }",
       "",
       "<!-- # Outputs -->",
+      "<!-- List concrete deliverable files -->",
       "$0"
     ],
-    "description": "Insert feature request template"
+    "description": "Feature request template with Copilot context hints"
   },
   "Snippet Cheatsheet": {
     "prefix": "snips",
