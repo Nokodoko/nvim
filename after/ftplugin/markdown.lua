@@ -18,6 +18,40 @@
 -- Enable spelling and wrap for window
 vim.cmd('setlocal spell wrap')
 
+-- Glowing markup highlights for markdown ======================================
+-- Bold text: bright orange glow
+vim.api.nvim_set_hl(0, '@markup.strong.markdown_inline', { fg = '#ff9e64', bold = true })
+-- Italic text: bright green glow
+vim.api.nvim_set_hl(0, '@markup.italic.markdown_inline', { fg = '#9ece6a', italic = true })
+-- Strikethrough
+vim.api.nvim_set_hl(0, '@markup.strikethrough.markdown_inline', { fg = '#565f89', strikethrough = true })
+
+-- Headers: vivid colors with bold, each level distinct
+vim.api.nvim_set_hl(0, '@markup.heading.1.markdown', { fg = '#ff007c', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.2.markdown', { fg = '#7aa2f7', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.3.markdown', { fg = '#bb9af7', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.4.markdown', { fg = '#7dcfff', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.5.markdown', { fg = '#e0af68', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.6.markdown', { fg = '#9ece6a', bold = true })
+-- Generic heading fallback
+vim.api.nvim_set_hl(0, '@markup.heading.markdown', { fg = '#ff007c', bold = true })
+
+-- Heading markers (the # symbols)
+vim.api.nvim_set_hl(0, '@markup.heading.1.marker.markdown', { fg = '#ff007c', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.2.marker.markdown', { fg = '#7aa2f7', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.3.marker.markdown', { fg = '#bb9af7', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.4.marker.markdown', { fg = '#7dcfff', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.5.marker.markdown', { fg = '#e0af68', bold = true })
+vim.api.nvim_set_hl(0, '@markup.heading.6.marker.markdown', { fg = '#9ece6a', bold = true })
+
+-- Code spans (inline `code`)
+vim.api.nvim_set_hl(0, '@markup.raw.markdown_inline', { fg = '#73daca', bg = '#1a1b26' })
+
+-- Links
+vim.api.nvim_set_hl(0, '@markup.link.markdown_inline', { fg = '#7aa2f7', underline = true })
+vim.api.nvim_set_hl(0, '@markup.link.url.markdown_inline', { fg = '#565f89', underline = true })
+vim.api.nvim_set_hl(0, '@markup.link.label.markdown_inline', { fg = '#7dcfff', bold = true })
+
 -- Fold with tree-sitter
 vim.cmd('setlocal foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr()')
 
