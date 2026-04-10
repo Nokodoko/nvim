@@ -34,7 +34,12 @@ local now_if_args = _G.Config.now_if_args
 -- - `:h mini.nvim-color-schemes` - list of other color schemes
 -- - `:h MiniHues-examples` - how to define highlighting with 'mini.hues'
 -- - 'plugin/40_plugins.lua' honorable mentions - other good color schemes
-now(function() vim.cmd('colorscheme miniwinter') end)
+now(function()
+  vim.cmd('colorscheme miniwinter')
+  vim.api.nvim_set_hl(0, 'Normal', { bg = 'NONE' })
+  vim.api.nvim_set_hl(0, 'NormalFloat', { bg = 'NONE' })
+  vim.api.nvim_set_hl(0, 'NormalNC', { bg = 'NONE' })
+end)
 
 -- You can try these other 'mini.hues'-based color schemes (uncomment with `gcc`):
 -- now(function() vim.cmd('colorscheme minispring') end)
@@ -522,6 +527,14 @@ later(function() require('mini.git').setup() end)
 later(function()
   local hipatterns = require('mini.hipatterns')
   local hi_words = MiniExtra.gen_highlighter.words
+
+  -- Define extra highlight groups for additional keywords and slash commands
+  vim.api.nvim_set_hl(0, 'HipatternsWarning', { fg = '#1a1b26', bg = '#ff9e64', bold = true })
+  vim.api.nvim_set_hl(0, 'HipatternsImportant', { fg = '#1a1b26', bg = '#bb9af7', bold = true })
+  vim.api.nvim_set_hl(0, 'HipatternsBug', { fg = '#1a1b26', bg = '#f7768e', bold = true })
+  vim.api.nvim_set_hl(0, 'HipatternsXxx', { fg = '#1a1b26', bg = '#e0af68', bold = true })
+  vim.api.nvim_set_hl(0, 'HipatternsSlashCmd', { fg = '#7dcfff', bold = true })
+
   hipatterns.setup({
     highlighters = {
       -- Highlight a fixed set of common words. Will be highlighted in any place,
@@ -530,6 +543,18 @@ later(function()
       hack = hi_words({ 'HACK', 'Hack', 'hack' }, 'MiniHipatternsHack'),
       todo = hi_words({ 'TODO', 'Todo', 'todo' }, 'MiniHipatternsTodo'),
       note = hi_words({ 'NOTE', 'Note', 'note' }, 'MiniHipatternsNote'),
+
+      -- Extra keyword highlights
+      warning = hi_words({ 'WARNING', 'Warning', 'warning' }, 'HipatternsWarning'),
+      important = hi_words({ 'IMPORTANT', 'Important', 'important' }, 'HipatternsImportant'),
+      bug = hi_words({ 'BUG', 'Bug', 'bug' }, 'HipatternsBug'),
+      xxx = hi_words({ 'XXX' }, 'HipatternsXxx'),
+
+      -- Highlight slash commands (e.g. /pai, /swarm, /spec, /sr, /commit)
+      slash_cmd = {
+        pattern = '%f[/]/%l[%l%d_-]+',
+        group = 'HipatternsSlashCmd',
+      },
 
       -- Highlight hex color string (#aabbcc) with that color as a background
       hex_color = hipatterns.gen_highlighter.hex_color(),
