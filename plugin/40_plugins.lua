@@ -50,6 +50,7 @@ now_if_args(function()
     'lua',
     'vimdoc',
     'markdown',
+    'markdown_inline',
     'terraform',
     'python',
     'yaml',
@@ -57,6 +58,24 @@ now_if_args(function()
     'bash',
     'javascript',
     'typescript',
+
+    -- Extra languages for fenced code block highlighting in markdown
+    'go',
+    'html',
+    'css',
+    'toml',
+    'dockerfile',
+    'rust',
+    'c',
+    'cpp',
+    'sql',
+    'regex',
+    'diff',
+    'vim',
+    'xml',
+    'graphql',
+    'make',
+
     -- Add here more languages with which you want to use tree-sitter
     -- To see available languages:
     -- - Execute `:=require('nvim-treesitter').get_available()`
@@ -182,6 +201,11 @@ end)
 -- snippet files. They are organized in 'snippets/' directory (mostly) per language.
 -- 'mini.snippets' is designed to work with it as seamlessly as possible.
 -- See `:h MiniSnippets.gen_loader.from_lang()`.
+-- Vimwiki: prevent hijacking all .md files as vimwiki filetype.
+-- Only files inside a registered wiki directory will be treated as vimwiki.
+-- This is critical for treesitter fenced code block injection highlighting.
+vim.g.vimwiki_global_ext = 0
+
 -- TODO: 1. keybinds
 local pluglist = {
   "ThePrimeagen/harpoon",
