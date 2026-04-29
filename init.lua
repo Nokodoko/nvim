@@ -89,6 +89,32 @@ end
 _G.Config.now_if_args = vim.fn.argc(-1) > 0 and MiniDeps.now or MiniDeps.later
 
 
+-- LSP buffer-local keymaps applied to every attached server.
+-- In Neovim 0.11+ bare `gd` is no longer an LSP default (replaced by `grd`),
+-- so without this autocmd `gd` falls through to vim's built-in goto-local-declaration,
+-- which only searches the current function and never jumps to library/module source.
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('user-lsp-attach', { clear = true }),
+  callback = function(ev)
+    local opts = { buffer = ev.buf, silent = true }
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition,        vim.tbl_extend('force', opts, { desc = 'LSP: Goto definition' }))
+    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration,       vim.tbl_extend('force', opts, { desc = 'LSP: Goto declaration' }))
+    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation,    vim.tbl_extend('force', opts, { desc = 'LSP: Goto implementation' }))
+    vim.keymap.set('n', 'gy', vim.lsp.buf.type_definition,   vim.tbl_extend('force', opts, { desc = 'LSP: Goto type definition' }))
+    vim.keymap.set('n', 'K',  vim.lsp.buf.hover,             vim.tbl_extend('force', opts, { desc = 'LSP: Hover' }))
+    -- Remove Neovim 0.11+ default `gr*` mappings so bare `gr` fires without `timeoutlen` lag.
+    pcall(vim.keymap.del, 'n', 'grr')
+    pcall(vim.keymap.del, 'n', 'gri')
+    pcall(vim.keymap.del, 'n', 'grn')
+    pcall(vim.keymap.del, 'n', 'gra')
+    pcall(vim.keymap.del, 'n', 'grd')
+    vim.keymap.set('n', 'gr', function()
+      local ok, _ = pcall(require, 'telescope.builtin')
+      if ok then vim.cmd('Telescope lsp_references theme=ivy') else vim.lsp.buf.references() end
+    end, vim.tbl_extend('force', opts, { desc = 'LSP: References' }))
+  end,
+})
+
 -- NOTE: GET LSP WORKING
 vim.lsp.enable('terraform-ls')
 vim.lsp.config('terraform-ls', {
