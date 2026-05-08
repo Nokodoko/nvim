@@ -679,6 +679,30 @@ later(function()
       .. '<Cmd>lua MiniMap.refresh({}, { lines = false, scrollbar = false })<CR>'
     vim.keymap.set('n', key, rhs)
   end
+
+  -- Auto-open the map on the first real file buffer (skip mini.starter/help/etc)
+  vim.api.nvim_create_autocmd('BufRead', {
+    group = vim.api.nvim_create_augroup('MiniMapAutoOpen', { clear = true }),
+    once = true,
+    callback = function()
+      if vim.bo.buftype ~= '' then return end
+      pcall(MiniMap.open)
+    end,
+  })
+
+  -- Eager fire: if BufRead already fired before this `later()` callback ran
+  -- (e.g. `nvim foo.lua`), the once=true autocmd above never sees an event.
+  -- Open the map directly for the current real-file buffer.
+  if vim.bo.buftype == '' and vim.api.nvim_buf_get_name(0) ~= '' then
+    pcall(MiniMap.open)
+  end
+
+  -- Also open the map on the mini.starter dashboard
+  vim.api.nvim_create_autocmd('User', {
+    pattern = 'MiniStarterOpened',
+    group = vim.api.nvim_create_augroup('MiniMapAutoOpenStarter', { clear = true }),
+    callback = function() pcall(MiniMap.open) end,
+  })
 end)
 
 -- Move any selection in any direction. Example usage in Normal mode:
