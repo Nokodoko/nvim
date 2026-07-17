@@ -132,7 +132,7 @@ local function collect_jsonl_entries(files, role, limit)
   return entries
 end
 
--- Get sorted Pi session files (newest first)
+-- Get sorted Pi session files (newest first, ordered by mtime)
 local function get_pi_session_files()
   local sessions_dir = vim.fn.expand('~/.pi/agent/sessions')
   if vim.fn.isdirectory(sessions_dir) ~= 1 then
@@ -144,7 +144,17 @@ local function get_pi_session_files()
     vim.notify('No Pi session files found.', vim.log.levels.WARN)
     return nil
   end
-  table.sort(files, function(a, b) return a > b end)
+  -- Sort by mtime descending so the most-recently-written session is first.
+  -- Lexical sort on the path is wrong because the parent directory name
+  -- (cwd safepath, e.g. --tmp-pi-runtime-suite---) dominates the timestamp
+  -- embedded in the filename, letting stale /tmp test runs outrank the
+  -- user's real recent sessions under ~/Programs/...
+  local mtimes = {}
+  for _, path in ipairs(files) do
+    local stat = vim.loop.fs_stat(path)
+    mtimes[path] = (stat and stat.mtime and stat.mtime.sec) or 0
+  end
+  table.sort(files, function(a, b) return mtimes[a] > mtimes[b] end)
   return files
 end
 
