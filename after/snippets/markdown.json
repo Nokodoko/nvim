@@ -617,6 +617,21 @@
     ],
     "description": "Feature request template with Copilot context hints"
   },
+  "Troubleshooting and Remediation": {
+    "prefix": "troubleshooting",
+    "body": [
+      "# Troubleshooting and Remediation",
+      "",
+      "# Issue:",
+      "",
+      "# Assets",
+      "",
+      "# Dependencies",
+      "",
+      "<!-- # Outputs -->"
+    ],
+    "description": "Troubleshooting and remediation template with commented-out Outputs section"
+  },
   "R2-D2 Harness": {
     "prefix": "r2-d2",
     "body": [
@@ -854,6 +869,7 @@
       "  multi    \u2014 Sequential multi-step template",
       "  team     \u2014 Team assignment template",
       "  feature_request \u2014 Feature request template",
+      "  troubleshooting \u2014 Troubleshooting and remediation template",
       "-->"
     ],
     "description": "List all available markdown prompt snippets"
