@@ -230,9 +230,16 @@ end
 
 -- telescope-cmdr.nvim =======================================================
 -- Telescope pickers for computeCommander: agents, sessions, mail, merge, etc.
+-- Host-gated: cmdr is a Linux-only orchestration tool. The plugin path lives
+-- under ~/Programs/ai/computeCommander which only exists on lewis. Skip the
+-- entire load + keybinds on hosts where the plugin directory is missing so
+-- mac/other machines launch nvim cleanly.
 later(function()
-  add({ source = 'nvim-telescope/telescope.nvim' }) -- ensure telescope loaded first
   local cmdr_plugin = vim.fn.expand('~/Programs/ai/computeCommander/.claude/worktrees/telescope/plugins/telescope-cmdr.nvim')
+  if vim.fn.isdirectory(cmdr_plugin) == 0 then
+    return
+  end
+  add({ source = 'nvim-telescope/telescope.nvim' }) -- ensure telescope loaded first
   vim.opt.runtimepath:prepend(cmdr_plugin)
   package.path = cmdr_plugin .. '/lua/?.lua;' .. cmdr_plugin .. '/lua/?/init.lua;' .. package.path
   require('telescope').load_extension('cmdr')
