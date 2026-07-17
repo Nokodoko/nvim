@@ -45,6 +45,14 @@
 local uv = vim.uv or vim.loop
 vim.g.__startup_hrtime = uv and uv.hrtime and uv.hrtime() or nil
 
+-- Disable unused language providers BEFORE anything else runs.
+-- `require('vim._core.defaults')` probes these (and clipboard) during startup;
+-- skipping them shaves real wall-clock time off every interactive launch.
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_node_provider    = 0
+vim.g.loaded_perl_provider    = 0
+vim.g.loaded_ruby_provider    = 0
+
 -- Bootstrap 'mini.nvim' manually in a way that it gets managed by 'mini.deps'
 local mini_path = vim.fn.stdpath('data') .. '/site/pack/deps/start/mini.nvim'
 if not vim.loop.fs_stat(mini_path) then
