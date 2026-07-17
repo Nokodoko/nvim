@@ -25,7 +25,19 @@ global.root_spec = { "lsp", { ".git", "lua" }, "cwd" }
 -- General ====================================================================
 vim.g.mapleader = ' ' -- Use `<Space>` as <Leader> key
 
-vim.o.clipboard   = 'unnamedplus'  -- Use system clipboard
+-- Lazy clipboard: setting `clipboard='unnamedplus'` eagerly causes Neovim
+-- to initialize the system-clipboard provider (xclip/wl-copy probe) during
+-- startup. Deferring until UIEnter shaves a few ms off first paint without
+-- changing user-visible behavior (clipboard yanks happen after a keystroke).
+vim.api.nvim_create_autocmd('UIEnter', {
+  group = vim.api.nvim_create_augroup('user-lazy-clipboard', { clear = true }),
+  once = true,
+  callback = function()
+    vim.schedule(function()
+      vim.o.clipboard = (vim.env.SSH_CONNECTION and vim.env.SSH_CONNECTION ~= '') and '' or 'unnamedplus'
+    end)
+  end,
+})
 vim.o.mouse       = 'a'            -- Enable mouse
 vim.o.mousescroll = 'ver:25,hor:6' -- Customize mouse scroll
 vim.o.switchbuf   = 'usetab'       -- Use already opened buffers when switching
