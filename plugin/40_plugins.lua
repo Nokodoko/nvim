@@ -188,6 +188,14 @@ later(function()
       shfmt = {
         prepend_args = { '-i', '2' }, -- 2 space indent
       },
+      prettier = {
+        prepend_args = function(_, ctx)
+          if vim.bo[ctx.buf].filetype == 'markdown' then
+            return { '--print-width', '85', '--prose-wrap', 'always' }
+          end
+          return {}
+        end,
+      },
     },
   })
 end)

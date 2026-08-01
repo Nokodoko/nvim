@@ -60,7 +60,7 @@ vim.keymap.del('n', 'gO', { buffer = 0 })
 
 -- Set formatprg to prettier so `gq` on visual selections formats markdown
 -- (including table alignment). Requires prettier installed via Mason or system.
-vim.bo.formatprg = 'prettier --parser markdown'
+vim.bo.formatprg = 'prettier --parser markdown --print-width 85 --prose-wrap always'
 
 -- Format current table under cursor using conform.nvim
 -- Usage: <Leader>lT in Normal mode while cursor is inside a table
