@@ -857,6 +857,30 @@ later(function()
 
   -- Start LSP server to show snippets in mini.completion menu
   snippets.start_lsp_server()
+
+  -- Auto-open the icarus provider/model Telescope picker when a snippet's
+  -- `model:` tabstop becomes current (r2-d2 / r2-d2-agent / r2-d2-project in
+  -- after/snippets/markdown.json; see lua/icarus_model_picker.lua). Detected
+  -- via a sentinel default text (PICK_MODEL) rather than a tabstop number,
+  -- since each of the three snippets numbers that tabstop differently.
+  --
+  -- `stopinsert` before / `startinsert` after mirrors the existing telescope-
+  -- cmdr `<C-k>` wiring below. Safe mid-session: mini.snippets only
+  -- auto-stops a session on ModeChanged-to-Normal when the FINAL ($0)
+  -- tabstop is current (see `stop_if_final` in mini.snippets' source) --
+  -- the model field never is, so this never kills an in-progress session.
+  vim.api.nvim_create_autocmd('User', {
+    pattern = 'MiniSnippetsSessionJump',
+    callback = function()
+      if MiniSnippets.session.get() == nil then return end
+      if not vim.api.nvim_get_current_line():find('PICK_MODEL', 1, true) then return end
+      vim.schedule(function()
+        vim.cmd('stopinsert')
+        require('icarus_model_picker').pick_replace_sentinel('PICK_MODEL')
+        vim.cmd('startinsert')
+      end)
+    end,
+  })
 end)
 
 -- Split and join arguments (regions inside brackets between allowed separators).
