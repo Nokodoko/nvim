@@ -881,6 +881,23 @@ later(function()
       end)
     end,
   })
+
+  -- Choose a non-default agent count for the r2-d2 / r2-d2-project family
+  -- (bare `r2-d2<Tab>` / `r2-d2-project<Tab>` still expand to
+  -- r2d2_snippets.DEFAULT_AGENT_COUNT with no prompt -- see
+  -- after/snippets/markdown.lua and lua/r2d2_snippets.lua). Each generated
+  -- agent block gets its own PICK_MODEL sentinel, so the autocmd above fires
+  -- independently per block without any extra wiring.
+  vim.api.nvim_create_user_command(
+    'R2D2Harness',
+    function() require('r2d2_snippets').insert('harness') end,
+    { desc = 'Insert R2-D2 harness template, prompting for agent count' }
+  )
+  vim.api.nvim_create_user_command(
+    'R2D2Project',
+    function() require('r2d2_snippets').insert('project') end,
+    { desc = 'Insert R2-D2 project template, prompting for agent count' }
+  )
 end)
 
 -- Split and join arguments (regions inside brackets between allowed separators).
