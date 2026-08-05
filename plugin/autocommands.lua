@@ -256,3 +256,40 @@ vim.cmd([[
 --   autocmd!
 --   autocmd BufWritePre * lua vim.lsp.buf.formatting()
 -- augroup end
+
+-- Persistent folds ============================================================
+-- Save/restore folds (and cursor, per 'viewoptions') across sessions via view
+-- files in stdpath('state')/view. Guarded to real, on-disk file buffers so we
+-- never mkview special buffers (help, quickfix, terminal, git commit, etc.).
+local fold_view = vim.api.nvim_create_augroup('PersistentFolds', { clear = true })
+
+local function fold_view_ok()
+  local buf = vim.api.nvim_get_current_buf()
+  if vim.bo[buf].buftype ~= '' then return false end        -- skip nofile/help/terminal/quickfix/prompt
+  if not vim.bo[buf].modifiable then return false end        -- skip read-only scratch
+  if vim.bo[buf].filetype == '' then return false end        -- skip unnamed/no-filetype scratch
+  local ft = vim.bo[buf].filetype
+  if ft == 'gitcommit' or ft == 'gitrebase' or ft == 'help' then return false end
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == '' then return false end                        -- must have a path
+  if vim.fn.filereadable(name) ~= 1 then return false end    -- must exist on disk
+  return true
+end
+
+vim.api.nvim_create_autocmd('BufWinLeave', {
+  group = fold_view,
+  pattern = '*',
+  desc = 'Save folds/cursor to a view file',
+  callback = function()
+    if fold_view_ok() then vim.cmd('silent! mkview') end
+  end,
+})
+
+vim.api.nvim_create_autocmd('BufWinEnter', {
+  group = fold_view,
+  pattern = '*',
+  desc = 'Restore folds/cursor from a view file',
+  callback = function()
+    if fold_view_ok() then vim.cmd('silent! loadview') end
+  end,
+})
