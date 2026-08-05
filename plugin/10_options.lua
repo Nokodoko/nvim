@@ -75,10 +75,17 @@ vim.o.fillchars = 'eob: ,fold:╌'
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
 -- Folds (see `:h fold-commands`, `:h zM`, `:h zR`, `:h zA`, `:h zj`)
-vim.o.foldlevel   = 10       -- Fold nothing by default; set to 0 or 1 to fold
-vim.o.foldmethod  = 'indent' -- Fold based on indent level
-vim.o.foldnestmax = 10       -- Limit number of fold levels
-vim.o.foldtext    = ''       -- Show text under fold with its highlighting
+-- Use Tree-sitter structural folds when a parser exists; it degrades to "no
+-- folds" (never E350) for buffers without a parser. NB: manual `zf` needs
+-- foldmethod=manual/marker -- za/zc/zo/zM/zR work fine under expr.
+vim.o.foldenable      = true    -- Enable folding (fold commands don't error)
+vim.o.foldlevel       = 99      -- Start with everything unfolded
+vim.o.foldlevelstart  = 99      -- New windows/buffers open fully unfolded
+vim.o.foldmethod      = 'expr'  -- Compute folds from an expression...
+vim.o.foldexpr        = 'v:lua.vim.treesitter.foldexpr()' -- ...via Tree-sitter
+vim.o.foldnestmax     = 10       -- Limit number of fold levels
+vim.o.foldtext        = ''       -- Show text under fold with its highlighting
+vim.o.viewoptions     = 'folds,cursor' -- mkview saves only folds+cursor (no curdir)
 
 -- Editing ====================================================================
 vim.o.autoindent    = true    -- Use auto indent
