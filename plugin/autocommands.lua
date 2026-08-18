@@ -290,6 +290,19 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
   pattern = '*',
   desc = 'Restore folds/cursor from a view file',
   callback = function()
-    if fold_view_ok() then vim.cmd('silent! loadview') end
+    -- Defer past this tick: FileType-triggered treesitter attach (see
+    -- 'Start tree-sitter' in plugin/40_plugins.lua) can still be pending,
+    -- so foldmethod/foldexpr for this buffer may not be final yet. Loading
+    -- a view before that settles risks replaying fold state against a
+    -- foldmethod that no longer matches -> E350. pcall is a belt-and-
+    -- suspenders on top of `silent!` for any error mkview/loadview can't
+    -- self-guard (e.g. one raised outside the sourced view script).
+    if not fold_view_ok() then return end
+    local buf = vim.api.nvim_get_current_buf()
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(buf) then return end
+      if vim.api.nvim_get_current_buf() ~= buf then return end
+      pcall(vim.cmd, 'silent! loadview')
+    end)
   end,
 })
