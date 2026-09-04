@@ -330,23 +330,24 @@ end
 nmap_leader('uf', toggle_autoformat_global,  'Toggle format (global)')
 nmap_leader('uF', toggle_autoformat_buffer,  'Toggle format (buffer)')
 
--- Copilot toggles (requires copilot.lua to be loaded)
-local toggle_copilot = function()
-  local ok, suggestion = pcall(require, 'copilot.suggestion')
+-- minuet completion toggles (requires minuet-ai.nvim to be loaded)
+-- Replaced the old Copilot toggles: copilot.lua cannot target a local
+-- endpoint, so inline completion now runs on minuet against `cai`.
+local toggle_minuet = function()
+  local ok, vt = pcall(require, 'minuet.virtualtext')
   if not ok then
-    vim.notify('Copilot not loaded', vim.log.levels.WARN)
+    vim.notify('minuet not loaded', vim.log.levels.WARN)
     return
   end
-  if suggestion.is_visible() then
-    suggestion.dismiss()
+  if vt.action.is_visible() then
+    vt.action.dismiss()
   end
-  vim.b.copilot_suggestion_auto_trigger = not vim.b.copilot_suggestion_auto_trigger
-  local state = vim.b.copilot_suggestion_auto_trigger and 'enabled' or 'disabled'
-  vim.notify('Copilot ' .. state .. ' (buffer)', vim.log.levels.INFO)
+  -- Buffer-local (vim.b.minuet_virtual_text_auto_trigger); notifies state itself
+  vt.action.toggle_auto_trigger()
 end
 
-nmap_leader('uc', toggle_copilot,                                'Toggle Copilot (buffer)')
-nmap_leader('uC', '<Cmd>Copilot panel<CR>',                      'Copilot panel')
+nmap_leader('uc', toggle_minuet,                                'Toggle minuet (buffer)')
+nmap_leader('uC', '<Cmd>Minuet change_model<CR>',               'Minuet: pick model')
 
 -- Toggle YAML/Jinja2 filetype
 local toggle_yaml_jinja = function()

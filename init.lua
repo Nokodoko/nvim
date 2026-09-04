@@ -138,7 +138,7 @@ vim.lsp.config('terraform-ls', {
     }
   },
   ignore = { 'ignoreSingleFileWarning' },
-  filetypes = { '.tf', 'terraform' },
+  filetypes = { 'terraform', 'terraform-vars' },
 })
 
 -- Keep your existing lua_ls configuration

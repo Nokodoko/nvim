@@ -63,6 +63,10 @@ now(function()
   require('mini.basics').setup({
     -- Manage options in 'plugin/10_options.lua' for didactic purposes
     options = { basic = false },
+    -- 'basic' also registers a TextYankPost autocmd calling the deprecated
+    -- vim.hl.on_yank(); our own highlight-on-yank lives in
+    -- plugin/autocommands.lua using vim.hl.hl_op(), so disable it here.
+    autocommands = { basic = false },
     mappings = {
       -- Create `<C-hjkl>` mappings for window navigation
       windows = true,
@@ -620,7 +624,7 @@ later(function()
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
-  -- On `<C-l>` accept completion if pmenu visible, otherwise accept Copilot suggestion
+  -- On `<C-l>` accept completion if pmenu visible, otherwise accept minuet suggestion
   local pmenu_select_accept = {
     condition = function()
       return vim.fn.pumvisible() == 1
@@ -633,16 +637,16 @@ later(function()
       return '<C-y>'
     end,
   }
-  local copilot_step = {
+  local minuet_step = {
     condition = function()
-      local suggestion = package.loaded['copilot.suggestion']
-      return suggestion and suggestion.is_visible()
+      local vt = package.loaded['minuet.virtualtext']
+      return vt and vt.action.is_visible()
     end,
     action = function()
-      require('copilot.suggestion').accept()
+      require('minuet.virtualtext').action.accept()
     end,
   }
-  MiniKeymap.map_multistep('i', '<C-l>', { pmenu_select_accept, copilot_step })
+  MiniKeymap.map_multistep('i', '<C-l>', { pmenu_select_accept, minuet_step })
   -- On `<BS>` just try to account for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<BS>', { 'minipairs_bs' })
 end)

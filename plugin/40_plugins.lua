@@ -150,6 +150,15 @@ later(function()
   -- - `:h Conform`
   -- - `:h conform-options`
   -- - `:h conform-formatters`
+  -- Paths that must NEVER be auto-formatted, as Lua patterns matched against
+  -- the buffer's full path. Prettier rewrites markdown emphasis characters:
+  -- `adp_` becomes `adp\_`, and a pair like `adp_ authy_` becomes `adp* authy*`.
+  -- That corrupts the key lines in ~/.pass/pass.md, and parse_pass.sh (which
+  -- strips one trailing `_`/`*`) then yields a key of `adp\`.
+  local format_protected = {
+    '/%.pass/', -- password store
+  }
+
   require('conform').setup({
     -- Map of filetype to formatters
     -- Make sure that necessary CLI tool is available (install via Mason or system)
@@ -172,6 +181,11 @@ later(function()
 
     -- Format on save with timeout
     format_on_save = function(bufnr)
+      -- Protected paths win over every toggle.
+      local path = vim.api.nvim_buf_get_name(bufnr)
+      for _, pat in ipairs(format_protected) do
+        if path:match(pat) then return end
+      end
       -- Check buffer-local toggle (takes precedence)
       local bufvar = vim.b[bufnr].autoformat
       if bufvar ~= nil then
@@ -191,7 +205,7 @@ later(function()
       prettier = {
         prepend_args = function(_, ctx)
           if vim.bo[ctx.buf].filetype == 'markdown' then
-            return { '--print-width', '85', '--prose-wrap', 'always' }
+            return { '--print-width', '85', '--prose-wrap', 'preserve' }
           end
           return {}
         end,
@@ -217,7 +231,6 @@ vim.g.vimwiki_global_ext = 0
 -- TODO: 1. keybinds
 local pluglist = {
   "ThePrimeagen/harpoon",
-  "jackMort/ChatGPT.nvim",
   "jesseduffield/lazygit",
   "munifTanjim/nui.nvim",
   "nvim-lua/plenary.nvim",
@@ -307,78 +320,176 @@ later(function()
   require('mason').setup()
 end)
 
--- GitHub Copilot ============================================================
+-- minuet-ai.nvim (local inline completion) ==================================
+-- nvim-model:managed model=qwen3-next-80b-tp2 host=cai:8090
 --
--- AI-powered code completion. Provides inline suggestions as you type.
--- Requires GitHub Copilot subscription and authentication.
+-- Replaces GitHub Copilot with the local llama.cpp server on `cai`
+-- (Qwen3-30B-A3B-Instruct-2507, 98k ctx). copilot.lua could NOT be reused:
+-- its config surface (auth_provider_url / copilot_model / server.custom_
+-- server_filepath) has no inference-endpoint knob -- it always speaks
+-- GitHub's proprietary Copilot LSP protocol. minuet's `openai_compatible`
+-- provider takes a raw end_point, so it talks to llama.cpp directly.
 --
--- First-time setup:
--- 1. Run `:Copilot auth` to authenticate with GitHub
--- 2. Follow the browser prompts to authorize
+-- No subscription and no `:Copilot auth` step -- llama.cpp ignores the
+-- bearer token, so api_key returns a constant. (minuet treats a STRING
+-- api_key as an env-var *name* and a FUNCTION as the literal key --
+-- see minuet/utils.lua get_api_key.)
 --
 -- Usage:
--- - Suggestions appear as virtual text (grayed out) as you type
--- - `<M-l>` (Alt+l) - Accept suggestion
--- - `<M-]>` - Next suggestion
--- - `<M-[>` - Previous suggestion
+-- - MANUAL TRIGGER ONLY (auto-trigger froze the UI ~5s per request):
+--   `<M-.>` / `<M-,>` in insert mode request a suggestion on demand
+-- - Suggestions appear as virtual text (grayed out) once requested
+-- - `<C-l>` - Accept suggestion (via MiniKeymap, see 30_mini.lua)
+-- - `<M-j>` - Accept one line
+-- - `<M-w>` - Accept N lines (prompts for N; minuet has no accept_word)
 -- - `<C-]>` - Dismiss suggestion
--- - `:Copilot panel` - Open suggestions panel
+-- - `<leader>uc` - toggle auto-trigger (no-op unless auto_trigger_ft set)
+-- - `<leader>uk` - open the keybind cheat sheet (see plugin/70_cheatsheet.lua)
 --
 -- See also:
--- - `:h copilot` - Plugin documentation
+-- - `:h minuet` - Plugin documentation
+-- - `/nvim-model <model> <host>` - repoint this + ChatGPT.nvim at a new model
 later(function()
-  add('zbirenbaum/copilot.lua')
+  add('milanglacier/minuet-ai.nvim')
 
-  require('copilot').setup({
-    -- Disable default Tab mapping to avoid conflict with mini.completion
-    suggestion = {
-      enabled = true,
-      auto_trigger = true,
-      debounce = 75,
-      keymap = {
-        accept = false,         -- Handled by MiniKeymap with pmenu fallback
-        accept_word = '<M-w>',  -- Alt+w to accept word
-        accept_line = '<M-j>',  -- Alt+j to accept line
-        next = '<M-]>',         -- Alt+] for next suggestion
-        prev = '<M-[>',         -- Alt+[ for previous suggestion
-        dismiss = '<C-]>',      -- Ctrl+] to dismiss
+  -- Filetypes where an inline suggestion is just noise. Everything else --
+  -- INCLUDING markdown -- is covered by the '*' auto_trigger_ft pattern below.
+  local minuet_ignore_ft = { 'gitcommit', 'gitrebase', 'help' }
+
+  require('minuet').setup({
+    provider = 'openai_compatible',
+    provider_options = {
+      openai_compatible = {
+        end_point = 'http://cai:8090/v1/chat/completions',
+        model = 'qwen3-next-80b-tp2',
+        name = 'cai',
+        -- Function form => used verbatim as the key. llama.cpp ignores it,
+        -- but minuet aborts the request when the key resolves to nil.
+        api_key = function() return 'local-no-auth' end,
+        stream = true,
+        optional = {
+          max_tokens = 256,
+        },
       },
     },
-    panel = {
-      enabled = true,
-      auto_refresh = true,
+
+    -- Latency budget, measured on cai (llama.cpp/Vulkan): ~1884 tok/s prompt
+    -- eval, ~69 tok/s generation.
+    --
+    -- request_timeout becomes curl `--max-time`. The 3s default killed EVERY
+    -- request on a real buffer: a 26k-char context is ~9900 prompt tokens and
+    -- needs ~9s end to end. Nothing streams until prompt eval completes (5.3s),
+    -- so a 3s cap produced zero tokens rather than a partial completion.
+    request_timeout = 30,
+    -- The chat backend encodes n_completions candidates into ONE response, so
+    -- the default of 3 costs ~3x the generation time. One keeps it responsive.
+    n_completions = 1,
+    -- Halved from the 16000 default to cut prompt eval roughly in half.
+    -- Split context_ratio 0.75 before the cursor / 0.25 after.
+    context_window = 8000,
+
+    virtualtext = {
+      -- Manual trigger only: auto-trigger caused ~5s UI freezes while the
+      -- llama.cpp prompt eval blocked redraws. Invoke with <M-]> (next) or
+      -- <M-[> (prev) in insert mode; manual invocation works in ANY filetype.
+      auto_trigger_ft = {},
+      auto_trigger_ignore_ft = minuet_ignore_ft,
+      -- mini.completion auto-triggers its popup constantly; at the default of
+      -- false the grey virtual text would be suppressed nearly all the time.
+      show_on_completion_menu = true,
       keymap = {
-        jump_prev = '[[',
-        jump_next = ']]',
-        accept = '<CR>',
-        refresh = 'gr',
-        open = '<M-CR>',        -- Alt+Enter to open panel
+        accept = nil,               -- Handled by MiniKeymap with pmenu fallback
+        accept_line = '<M-j>',      -- Alt+j to accept line
+        accept_n_lines = '<M-w>',   -- Alt+w to accept N lines
+        next = '<M-.>',             -- Alt+. to request/cycle next suggestion
+        prev = '<M-,>',             -- Alt+, to request/cycle previous suggestion
+        dismiss = '<C-]>',          -- Ctrl+] to dismiss
       },
-    },
-    filetypes = {
-      -- Enable for your main languages
-      terraform = true,
-      python = true,
-      go = true,
-      yaml = true,
-      json = true,
-      markdown = true,
-      lua = true,
-      sh = true,
-      bash = true,
-      -- Disable for these
-      gitcommit = false,
-      gitrebase = false,
-      help = false,
-      ['*'] = true,             -- Enable for all other filetypes
     },
   })
+
+  -- Manual-trigger mode: no buffer arming. `action.next`/`action.prev` fire a
+  -- request on demand even when auto-trigger is off, in any filetype. Do NOT
+  -- set vim.b.minuet_virtual_text_auto_trigger here -- arming buffers is what
+  -- re-enabled auto-trigger and brought back the ~5s UI freezes (the leftover
+  -- arming loop from the auto-trigger era was removed for exactly that reason).
 end)
 
+-- ChatGPT.nvim ==============================================================
+-- nvim-model:managed model=qwen3-next-80b-tp2 host=cai:8090
+-- Pointed at the local llama.cpp server on `cai` (Qwen3-30B-A3B-Instruct-2507,
+-- 98k ctx) instead of the OpenAI API. The endpoint is OpenAI-compatible, so
+-- only the host + model ids change.
+--
+-- Host resolution order (chatgpt/api.lua loadOptionalConfig):
+--   1. $OPENAI_API_HOST if set   2. api_host_cmd below
+-- so exporting OPENAI_API_HOST overrides this without editing the repo.
+--
+-- api_key_cmd is mandatory -- loadRequiredConfig warns and bails without a
+-- key. llama.cpp ignores the bearer token, so any non-empty string works.
+-- NOTE: *_cmd strings are split on whitespace and exec'd directly (no shell),
+-- so shell syntax (${VAR:-x}, pipes, globs) will NOT expand here.
 later(function()
-  -- config = function()
   add('jackMort/ChatGPT.nvim')
-  require('chatgpt').setup()
+  require('chatgpt').setup({
+    api_host_cmd = 'echo http://cai:8090',
+    api_key_cmd = 'echo local-no-auth',
+    loading_text = 'loading',
+    question_sign = '',
+    answer_sign = 'ﮧ',
+    max_line_length = 120,
+    yank_register = '+',
+    chat_layout = {
+      relative = 'editor',
+      position = '50%',
+      size = { height = '80%', width = '80%' },
+    },
+    settings_window = {
+      border = { style = 'rounded', text = { top = ' Settings ' } },
+    },
+    chat_window = {
+      filetype = 'chatgpt',
+      border = {
+        highlight = 'FloatBorder',
+        style = 'rounded',
+        text = { top = ' qwen3-next-80b-tp2 @ cai:8090 ' }, -- nvim-model:title
+      },
+    },
+    chat_input = {
+      prompt = '  ',
+      border = {
+        highlight = 'FloatBorder',
+        style = 'rounded',
+        text = { top_align = 'center', top = ' Prompt ' },
+      },
+    },
+    openai_params = {
+      model = 'qwen3-next-80b-tp2',
+      frequency_penalty = 0,
+      presence_penalty = 0,
+      max_tokens = 4096,
+      temperature = 0,
+      top_p = 1,
+      n = 1,
+    },
+    openai_edit_params = {
+      model = 'qwen3-next-80b-tp2',
+      temperature = 0,
+      top_p = 1,
+      n = 1,
+    },
+    keymaps = {
+      close = { '<C-c>', '<Esc>' },
+      yank_last = '<C-y>',
+      scroll_up = '<C-u>',
+      scroll_down = '<C-d>',
+      toggle_settings = '<C-o>',
+      new_session = '<C-n>',
+      cycle_windows = '<Tab>',
+      submit = '<Enter>',
+      submit_n = '<C-Enter>',
+    },
+  })
 end)
 
 later(function()
