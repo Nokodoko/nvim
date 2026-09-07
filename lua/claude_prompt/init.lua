@@ -238,12 +238,83 @@ local function insert_last_pi_response()
   insert_lines_at_cursor(lines, 'Pi response')
 end
 
+-- Icarus sessions: ~/.icarus/sessions/<project>/<id>.jsonl, flat records of
+-- type user_message / assistant_message with `text` and `ts`. The per-project
+-- `usage/` subfolder holds token accounting, not conversation, and is skipped.
+local function get_icarus_session_files()
+  local sessions_dir = vim.fn.expand('~/.icarus/sessions')
+  if vim.fn.isdirectory(sessions_dir) ~= 1 then
+    vim.notify('Icarus sessions directory not found: ' .. sessions_dir, vim.log.levels.WARN)
+    return nil
+  end
+  local files = vim.tbl_filter(
+    function(path) return not path:find('/usage/', 1, true) end,
+    vim.fn.glob(sessions_dir .. '/**/*.jsonl', false, true)
+  )
+  if #files == 0 then
+    vim.notify('No Icarus session files found.', vim.log.levels.WARN)
+    return nil
+  end
+  -- mtime order, same rationale as get_pi_session_files
+  local mtimes = {}
+  for _, path in ipairs(files) do
+    local stat = vim.loop.fs_stat(path)
+    mtimes[path] = (stat and stat.mtime and stat.mtime.sec) or 0
+  end
+  table.sort(files, function(a, b) return mtimes[a] > mtimes[b] end)
+  return files
+end
+
+-- Collect icarus records of one type ('user_message' | 'assistant_message')
+local function collect_icarus_entries(files, record_type, limit)
+  local entries = {}
+  for _, path in ipairs(files) do
+    if #entries >= limit then break end
+    for _, line in ipairs(vim.fn.readfile(path)) do
+      if #entries >= limit then break end
+      local ok, record = pcall(vim.fn.json_decode, line)
+      if ok and record and record.type == record_type
+        and type(record.text) == 'string' and record.text ~= '' then
+        local text = strip_ansi(record.text)
+        entries[#entries + 1] = {
+          timestamp = parse_iso_timestamp(record.ts),
+          preview = text:sub(1, 80):gsub('\n', ' '),
+          text = text,
+        }
+      end
+    end
+  end
+  return entries
+end
+
+-- Insert last Icarus response: final assistant_message of the newest session
+-- that has one. A freshly opened session holds only session_start, so the
+-- newest file is often empty; walk back until a reply is found.
+local function insert_last_icarus_response()
+  local files = get_icarus_session_files()
+  if not files then return end
+  for _, path in ipairs(files) do
+    local entries = collect_icarus_entries({ path }, 'assistant_message', 9999)
+    if #entries > 0 then
+      local last = entries[#entries]
+      insert_lines_at_cursor(vim.split(last.text, '\n', { plain = true }), 'Icarus response')
+      return
+    end
+  end
+  vim.notify('No Icarus assistant responses found.', vim.log.levels.WARN)
+end
+
+-- Agents offered by the three history pickers, in menu order
+local AGENTS = { 'Icarus', 'Claude', 'Pi' }
+
 -- Insert last response: pick agent first
 function M.insert_last_response()
-  vim.ui.select({ 'Claude', 'Pi' }, { prompt = 'Insert last response from:' }, function(choice)
+  vim.ui.select(AGENTS, { prompt = 'Insert last response from:' }, function(choice)
     if not choice then return end
     vim.schedule(function()
-      if choice == 'Claude' then
+      if choice == 'Icarus' then
+        insert_last_icarus_response()
+      elseif choice == 'Claude' then
         insert_last_claude_response()
       else
         insert_last_pi_response()
@@ -395,12 +466,38 @@ local function load_claude_prompts()
   open_history_picker('Claude Prompts', entries)
 end
 
+-- Load Icarus agent responses from ~/.icarus/sessions/**/*.jsonl
+local function load_icarus_history()
+  local files = get_icarus_session_files()
+  if not files then return end
+  local entries = collect_icarus_entries(files, 'assistant_message', 50)
+  if #entries == 0 then
+    vim.notify('No Icarus assistant responses found.', vim.log.levels.WARN)
+    return
+  end
+  open_history_picker('Icarus Responses', entries)
+end
+
+-- Load Icarus user prompts from ~/.icarus/sessions/**/*.jsonl
+local function load_icarus_prompts()
+  local files = get_icarus_session_files()
+  if not files then return end
+  local entries = collect_icarus_entries(files, 'user_message', 50)
+  if #entries == 0 then
+    vim.notify('No Icarus user prompts found.', vim.log.levels.WARN)
+    return
+  end
+  open_history_picker('Icarus Prompts', entries)
+end
+
 -- Select an agent response to insert: first pick agent, then browse history
 function M.select_response()
-  vim.ui.select({ 'Claude', 'Pi' }, { prompt = 'Select agent history:' }, function(choice)
+  vim.ui.select(AGENTS, { prompt = 'Select agent history:' }, function(choice)
     if not choice then return end
     vim.schedule(function()
-      if choice == 'Claude' then
+      if choice == 'Icarus' then
+        load_icarus_history()
+      elseif choice == 'Claude' then
         load_claude_history()
       else
         load_pi_history()
@@ -411,10 +508,12 @@ end
 
 -- Select a user prompt to insert: first pick agent, then browse prompt history
 function M.select_prompt()
-  vim.ui.select({ 'Claude', 'Pi' }, { prompt = 'Select agent prompts:' }, function(choice)
+  vim.ui.select(AGENTS, { prompt = 'Select agent prompts:' }, function(choice)
     if not choice then return end
     vim.schedule(function()
-      if choice == 'Claude' then
+      if choice == 'Icarus' then
+        load_icarus_prompts()
+      elseif choice == 'Claude' then
         load_claude_prompts()
       else
         load_pi_prompts()
