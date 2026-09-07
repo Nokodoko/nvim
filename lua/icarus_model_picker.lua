@@ -16,7 +16,7 @@ local fallback_entries = {
   'anthropic/claude-fable-5',
   'anthropic/claude-opus-4-8',
   'openai-codex/gpt-5.5',
-  'vllm-monty-laguna/qwen3.6-35b-a3b',
+  'vllm-monty/qwen3.6-35b-a3b',
 }
 
 --- Open the provider/model telescope picker.
