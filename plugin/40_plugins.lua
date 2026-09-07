@@ -416,9 +416,9 @@ later(function()
 end)
 
 -- ChatGPT.nvim ==============================================================
--- nvim-model:managed model=qwen3-next-80b-tp2 host=cai:8090
--- Pointed at the local llama.cpp server on `cai` (Qwen3-30B-A3B-Instruct-2507,
--- 98k ctx) instead of the OpenAI API. The endpoint is OpenAI-compatible, so
+-- nvim-model:managed model=glm-5.3-flash host=monty:30001
+-- Pointed at the local llama.cpp server on `monty` (GLM-5.3-Flash),
+-- instead of the OpenAI API. The endpoint is OpenAI-compatible, so
 -- only the host + model ids change.
 --
 -- Host resolution order (chatgpt/api.lua loadOptionalConfig):
@@ -432,7 +432,7 @@ end)
 later(function()
   add('jackMort/ChatGPT.nvim')
   require('chatgpt').setup({
-    api_host_cmd = 'echo http://cai:8090',
+    api_host_cmd = 'echo http://monty:30001',
     api_key_cmd = 'echo local-no-auth',
     loading_text = 'loading',
     question_sign = '',
@@ -452,7 +452,7 @@ later(function()
       border = {
         highlight = 'FloatBorder',
         style = 'rounded',
-        text = { top = ' qwen3-next-80b-tp2 @ cai:8090 ' }, -- nvim-model:title
+        text = { top = ' glm-5.3-flash @ monty:30001 ' }, -- nvim-model:title
       },
     },
     chat_input = {
@@ -464,7 +464,7 @@ later(function()
       },
     },
     openai_params = {
-      model = 'qwen3-next-80b-tp2',
+      model = 'glm-5.3-flash',
       frequency_penalty = 0,
       presence_penalty = 0,
       max_tokens = 4096,
@@ -473,7 +473,7 @@ later(function()
       n = 1,
     },
     openai_edit_params = {
-      model = 'qwen3-next-80b-tp2',
+      model = 'glm-5.3-flash',
       temperature = 0,
       top_p = 1,
       n = 1,
