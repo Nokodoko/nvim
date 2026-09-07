@@ -228,6 +228,8 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
 local git_log_buf_cmd = git_log_cmd .. ' --follow -- %'
 
+nmap_leader('g',  '<Cmd>LazyGit<CR>',                       'LazyGit')
+nmap_leader('gg', '<Cmd>LazyGit<CR>',                       'LazyGit')
 nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
 nmap_leader('gA', '<Cmd>Git diff --cached -- %<CR>',        'Added diff buffer')
 nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')

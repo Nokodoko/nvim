@@ -231,7 +231,7 @@ vim.g.vimwiki_global_ext = 0
 -- TODO: 1. keybinds
 local pluglist = {
   "ThePrimeagen/harpoon",
-  "jesseduffield/lazygit",
+  "kdheepak/lazygit.nvim",
   "munifTanjim/nui.nvim",
   "nvim-lua/plenary.nvim",
   "nvim-telescope/telescope-frecency.nvim",
