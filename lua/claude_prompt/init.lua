@@ -15,10 +15,10 @@ local function insert_response(target_buf, target_line, response_text)
   vim.api.nvim_buf_set_lines(target_buf, target_line, target_line, false, lines)
 end
 
--- Internal helper to prompt via vim.ui.input (rendered by noice at cursor)
+-- Internal helper: modal prompt field at the cursor (see claude_prompt.ui)
 local function open_prompt(include_selection)
   if api.is_busy() then
-    vim.notify('Claude is already processing a request', vim.log.levels.WARN)
+    vim.notify(api.get_model_name() .. ' is already processing a request', vim.log.levels.WARN)
     return
   end
 
@@ -26,9 +26,7 @@ local function open_prompt(include_selection)
   local target_buf = vim.api.nvim_get_current_buf()
   local target_line = vim.api.nvim_win_get_cursor(0)[1]
 
-  vim.ui.input({ prompt = api.get_model_name() .. ': ' }, function(input)
-    if not input or input == '' then return end
-
+  require('claude_prompt.ui').open({ model_name = api.get_model_name(), on_submit = function(input)
     local ctx = context.gather({
       include_file = true,
       include_cursor = true,
@@ -52,7 +50,7 @@ local function open_prompt(include_selection)
         vim.notify(who .. ' returned an empty response', vim.log.levels.ERROR)
       end
     end)
-  end)
+  end })
 end
 
 -- Main prompt function - prompts Claude with current buffer context
