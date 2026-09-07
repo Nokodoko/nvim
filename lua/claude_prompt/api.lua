@@ -3,16 +3,31 @@ local M = {}
 
 -- Default configuration
 M.config = {
-  model = 'sonnet',
+  model = 'icarus',
   max_tokens = 1024,
 }
 
--- Available models (short aliases for claude CLI)
+-- Available models.
+--   backend = 'claude'  -> shells out to `claude -p --model <id>`
+--   backend = 'openai'  -> POSTs to an OpenAI-compatible /v1/chat/completions
+--                          (local inference; `host` + `model` are the target)
+-- 'icarus' is the default: the GLM llama-server on monty, the same endpoint
+-- the :Icarus chat uses (see plugin/40_plugins.lua, nvim-model:managed).
 M.models = {
-  { name = 'Sonnet 4.5', id = 'sonnet' },
-  { name = 'Opus 4.6', id = 'opus' },
-  { name = 'Haiku 4.5', id = 'haiku' },
+  { name = 'icarus', id = 'icarus', backend = 'openai',
+    host = 'http://monty:30001', model = 'glm-5.3-flash' },
+  { name = 'Sonnet 4.5', id = 'sonnet', backend = 'claude' },
+  { name = 'Opus 4.6', id = 'opus', backend = 'claude' },
+  { name = 'Haiku 4.5', id = 'haiku', backend = 'claude' },
 }
+
+-- Look up the model table entry for the active model
+function M.current_model()
+  for _, model in ipairs(M.models) do
+    if model.id == M.config.model then return model end
+  end
+  return nil
+end
 
 -- Current job state
 local current_job_id = nil
@@ -29,12 +44,8 @@ end
 
 -- Get the human-readable name for the current model
 function M.get_model_name()
-  for _, model in ipairs(M.models) do
-    if model.id == M.config.model then
-      return model.name
-    end
-  end
-  return 'Unknown'
+  local model = M.current_model()
+  return model and model.name or 'Unknown'
 end
 
 -- Check if a request is currently in flight
@@ -105,15 +116,63 @@ Rules:
   -- Build the user prompt with context
   local user_prompt = M.build_prompt(prompt, context)
 
-  -- Build claude command (prompt piped via stdin)
-  local cmd = {
-    'claude',
-    '-p',
-    '--model', M.config.model,
-    '--no-session-persistence',
-    '--permission-mode', 'acceptEdits',
-    '--system-prompt', system_prompt,
-  }
+  local model = M.current_model() or { name = M.config.model, id = M.config.model, backend = 'claude' }
+
+  -- Per-backend command, stdin payload, and response parser. Both backends
+  -- receive their payload on stdin so nothing is shell-escaped into argv.
+  local cmd, stdin_payload, parse
+  if model.backend == 'openai' then
+    cmd = {
+      'curl', '-sS', '--max-time', '180',
+      '-H', 'Content-Type: application/json',
+      '-d', '@-',
+      model.host .. '/v1/chat/completions',
+    }
+    stdin_payload = vim.json.encode({
+      model = model.model,
+      temperature = 0,
+      max_tokens = 4096,
+      -- GLM emits reasoning_content by default; it burns the token budget
+      -- and is useless for buffer insertion. llama.cpp honours this kwarg.
+      chat_template_kwargs = { enable_thinking = false },
+      messages = {
+        { role = 'system', content = system_prompt },
+        { role = 'user', content = user_prompt },
+      },
+    })
+    parse = function(raw)
+      local ok, res = pcall(vim.json.decode, raw)
+      if not ok or type(res) ~= 'table' then
+        return nil, 'unparseable response from ' .. model.name .. ': ' .. raw:sub(1, 200)
+      end
+      if res.error then
+        local msg = type(res.error) == 'table' and res.error.message or tostring(res.error)
+        return nil, model.name .. ' error: ' .. tostring(msg)
+      end
+      local choice = res.choices and res.choices[1]
+      local content = choice and choice.message and choice.message.content
+      if type(content) ~= 'string' or content == '' then
+        local why = choice and choice.finish_reason == 'length' and ' (hit max_tokens)' or ''
+        return nil, 'Empty response from ' .. model.name .. why
+      end
+      return (content:gsub('^%s+', ''):gsub('%s+$', ''))
+    end
+  else
+    -- claude CLI (prompt piped via stdin)
+    cmd = {
+      'claude',
+      '-p',
+      '--model', model.id,
+      '--no-session-persistence',
+      '--permission-mode', 'acceptEdits',
+      '--system-prompt', system_prompt,
+    }
+    stdin_payload = user_prompt
+    parse = function(raw)
+      if raw == '' then return nil, 'Empty response from claude CLI' end
+      return raw
+    end
+  end
 
   -- Collect response chunks
   local stdout_chunks = {}
@@ -150,7 +209,7 @@ Rules:
 
         -- Handle errors
         if exit_code ~= 0 then
-          local error_msg = 'claude CLI failed (exit ' .. exit_code .. ')'
+          local error_msg = cmd[1] .. ' failed (exit ' .. exit_code .. ')'
           if #stderr_chunks > 0 then
             error_msg = error_msg .. ': ' .. table.concat(stderr_chunks, '\n')
           end
@@ -158,14 +217,8 @@ Rules:
           return
         end
 
-        -- Join response text
-        local response_text = table.concat(stdout_chunks, '\n')
-
-        if response_text and response_text ~= '' then
-          callback(response_text, nil)
-        else
-          callback(nil, 'Empty response from claude CLI')
-        end
+        local response_text, err = parse(table.concat(stdout_chunks, '\n'))
+        callback(response_text, err)
       end)
     end,
   })
@@ -175,14 +228,14 @@ Rules:
     callback(nil, 'Invalid job arguments')
     return
   elseif job_id == -1 then
-    callback(nil, 'claude command not found or not executable')
+    callback(nil, cmd[1] .. ' command not found or not executable')
     return
   end
 
   current_job_id = job_id
 
-  -- Send prompt via stdin then close to signal EOF
-  vim.fn.chansend(job_id, user_prompt)
+  -- Send payload via stdin then close to signal EOF
+  vim.fn.chansend(job_id, stdin_payload)
   vim.fn.chanclose(job_id, 'stdin')
 end
 

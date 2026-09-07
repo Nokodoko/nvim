@@ -37,18 +37,19 @@ local function open_prompt(include_selection)
       include_selection = include_selection,
     })
 
-    vim.notify('Claude: Thinking...', vim.log.levels.INFO)
+    local who = api.get_model_name()
+    vim.notify(who .. ': Thinking...', vim.log.levels.INFO)
 
     api.request(input, ctx, function(response_text, err)
       if err then
-        vim.notify('Claude: ' .. err, vim.log.levels.ERROR)
+        vim.notify(who .. ': ' .. err, vim.log.levels.ERROR)
         return
       end
 
       if response_text and response_text ~= '' then
         insert_response(target_buf, target_line, response_text)
       else
-        vim.notify('Claude returned an empty response', vim.log.levels.ERROR)
+        vim.notify(who .. ' returned an empty response', vim.log.levels.ERROR)
       end
     end)
   end)

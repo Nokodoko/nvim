@@ -36,7 +36,7 @@ vim.api.nvim_create_user_command('ClaudeModel', function()
     end
   )
 end, {
-  desc = 'Select Claude model',
+  desc = 'Select AI model for <Leader>ap',
 })
 
 -- Add leader group clue for AI commands
@@ -52,7 +52,7 @@ local xmap_leader = function(suffix, rhs, desc)
 end
 
 -- Normal mode: prompt with buffer context
-nmap_leader('ap', '<Cmd>ClaudePrompt<CR>', 'Prompt Claude')
+nmap_leader('ap', '<Cmd>ClaudePrompt<CR>', 'Prompt AI (icarus default)')
 
 -- Visual mode: prompt with selection
 xmap_leader('ap', ':<C-u>ClaudePromptVisual<CR>', 'Prompt with selection')
