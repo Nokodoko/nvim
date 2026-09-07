@@ -321,7 +321,7 @@ later(function()
 end)
 
 -- minuet-ai.nvim (local inline completion) ==================================
--- nvim-model:managed model=qwen3-next-80b-tp2 host=cai:8090
+-- nvim-model:managed model=qwen3-next-80b-abliterated host=cai:8090
 --
 -- Replaces GitHub Copilot with the local llama.cpp server on `cai`
 -- (Qwen3-30B-A3B-Instruct-2507, 98k ctx). copilot.lua could NOT be reused:
@@ -361,7 +361,7 @@ later(function()
     provider_options = {
       openai_compatible = {
         end_point = 'http://cai:8090/v1/chat/completions',
-        model = 'qwen3-next-80b-tp2',
+        model = 'qwen3-next-80b-abliterated',
         name = 'cai',
         -- Function form => used verbatim as the key. llama.cpp ignores it,
         -- but minuet aborts the request when the key resolves to nil.
