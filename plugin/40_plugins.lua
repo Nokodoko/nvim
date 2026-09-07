@@ -415,11 +415,11 @@ later(function()
   -- arming loop from the auto-trigger era was removed for exactly that reason).
 end)
 
--- ChatGPT.nvim ==============================================================
+-- ChatGPT.nvim (Icarus chat) ===============================================
 -- nvim-model:managed model=glm-5.3-flash host=monty:30001
--- Pointed at the local llama.cpp server on `monty` (GLM-5.3-Flash),
--- instead of the OpenAI API. The endpoint is OpenAI-compatible, so
--- only the host + model ids change.
+-- The chat surface is branded "Icarus" because it talks to local inference
+-- (the GLM llama-server on `monty`), not OpenAI. The endpoint is
+-- OpenAI-compatible, so only the host + model ids differ from upstream.
 --
 -- Host resolution order (chatgpt/api.lua loadOptionalConfig):
 --   1. $OPENAI_API_HOST if set   2. api_host_cmd below
@@ -429,39 +429,91 @@ end)
 -- key. llama.cpp ignores the bearer token, so any non-empty string works.
 -- NOTE: *_cmd strings are split on whitespace and exec'd directly (no shell),
 -- so shell syntax (${VAR:-x}, pipes, globs) will NOT expand here.
+--
+-- Option keys follow the plugin's CURRENT schema (popup_window / popup_input /
+-- chat.*). The older chat_window / chat_input / top-level welcome_message keys
+-- are silently ignored by the plugin, which is why the previous config's
+-- titles never showed.
+
+-- Text rendering of icarus.png: amber wing over the white ICARUS wordmark
+-- (the same mark the icarus web-ui header wears). Lines 1-7 are the wing,
+-- 8-12 the letters; the split drives the two-tone highlight below.
+local ICARUS_WING_LINES = 7
+local ICARUS_BANNER = [[
+                   ▗▄▖   ▟
+             ▄▄▄▖  ▝▜▙  ▟▛
+        ▄▄▄▖  ▝▜▙   ▜▙ ▟▛
+   ▄▄▄▄▖  ▝▜▙  ▜▙  ▜▙▟▛
+       ▝▀▜▙  ▜▙ ▜▙ ▜▛
+           ▝▀▜▙▜▙▜▙▛
+               ▝▀▜▛
+ ██  ██████  █████  ██████  ██  ██ ██████
+ ██  ██     ██   ██ ██   ██ ██  ██ ██
+ ██  ██     ███████ ██████  ██  ██ ██████
+ ██  ██     ██   ██ ██  ██  ██  ██     ██
+ ██  ██████ ██   ██ ██   ██ ██████ ██████
+
+        local inference · glm-5.3-flash @ monty
+]]
+
 later(function()
   add('jackMort/ChatGPT.nvim')
+
+  -- Brand colours are literal, not theme tokens: they are lifted from
+  -- icarus.png (gold wing, #eeeeee wordmark) and must read the same on any
+  -- colorscheme, exactly like the web-ui plate.
+  vim.api.nvim_set_hl(0, 'IcarusWing', { fg = '#d9a520' })
+  vim.api.nvim_set_hl(0, 'IcarusWord', { fg = '#eeeeee', bold = true })
+  vim.api.nvim_set_hl(0, 'IcarusTag',  { link = 'Comment' })
+  -- The plugin paints the whole welcome block with ChatGPTWelcome; make that
+  -- the wing colour and overlay the letters afterwards (see apply_banner_hl).
+  vim.api.nvim_set_hl(0, 'ChatGPTWelcome', { link = 'IcarusWing' })
+
   require('chatgpt').setup({
     api_host_cmd = 'echo http://monty:30001',
     api_key_cmd = 'echo local-no-auth',
-    loading_text = 'loading',
-    question_sign = '',
-    answer_sign = 'ﮧ',
-    max_line_length = 120,
     yank_register = '+',
-    chat_layout = {
-      relative = 'editor',
-      position = '50%',
-      size = { height = '80%', width = '80%' },
+    chat = {
+      welcome_message = ICARUS_BANNER,
+      loading_text = 'icarus is thinking',
+      question_sign = '',
+      answer_sign = 'ﮧ',
+      max_line_length = 120,
+      keymaps = {
+        close = { '<C-c>', '<Esc>' },
+        yank_last = '<C-y>',
+        scroll_up = '<C-u>',
+        scroll_down = '<C-d>',
+        toggle_settings = '<C-o>',
+        new_session = '<C-n>',
+        cycle_windows = '<Tab>',
+      },
     },
-    settings_window = {
-      border = { style = 'rounded', text = { top = ' Settings ' } },
+    popup_layout = {
+      default = 'center',
+      center = { width = '80%', height = '80%' },
     },
-    chat_window = {
-      filetype = 'chatgpt',
+    popup_window = {
       border = {
         highlight = 'FloatBorder',
         style = 'rounded',
-        text = { top = ' glm-5.3-flash @ monty:30001 ' }, -- nvim-model:title
+        text = { top = ' ICARUS · glm-5.3-flash @ monty:30001 ' }, -- nvim-model:title
       },
+      buf_options = { filetype = 'markdown' },
     },
-    chat_input = {
+    popup_input = {
       prompt = '  ',
       border = {
         highlight = 'FloatBorder',
         style = 'rounded',
-        text = { top_align = 'center', top = ' Prompt ' },
+        text = { top_align = 'center', top = ' NORMAL ' },
       },
+      submit = '<Enter>',
+      submit_n = '<C-Enter>',
+      placeholder = 'Ask icarus... (Enter to send)',
+    },
+    settings_window = {
+      border = { style = 'rounded', text = { top = ' Settings ' } },
     },
     openai_params = {
       model = 'glm-5.3-flash',
@@ -478,18 +530,76 @@ later(function()
       top_p = 1,
       n = 1,
     },
-    keymaps = {
-      close = { '<C-c>', '<Esc>' },
-      yank_last = '<C-y>',
-      scroll_up = '<C-u>',
-      scroll_down = '<C-d>',
-      toggle_settings = '<C-o>',
-      new_session = '<C-n>',
-      cycle_windows = '<Tab>',
-      submit = '<Enter>',
-      submit_n = '<C-Enter>',
-    },
   })
+
+  -- Vim-mode indicator ---------------------------------------------------------
+  -- The prompt popup is a floating window: it has no statusline, and
+  -- 'showmode' is off globally, so insert vs normal was invisible inside it.
+  -- Mirror the mode into the input border title, coloured with the same
+  -- mini.statusline groups the rest of the editor uses.
+  local mode_labels = {
+    n = { 'NORMAL',  'MiniStatuslineModeNormal'  },
+    i = { 'INSERT',  'MiniStatuslineModeInsert'  },
+    v = { 'VISUAL',  'MiniStatuslineModeVisual'  },
+    V = { 'V-LINE',  'MiniStatuslineModeVisual'  },
+    ['\22'] = { 'V-BLOCK', 'MiniStatuslineModeVisual' },
+    R = { 'REPLACE', 'MiniStatuslineModeReplace' },
+    c = { 'COMMAND', 'MiniStatuslineModeCommand' },
+  }
+
+  local function current_chat()
+    local ok, flow = pcall(require, 'chatgpt.flows.chat')
+    if not ok or flow.chat == nil or not flow.chat.active then return nil end
+    return flow.chat
+  end
+
+  local function render_mode()
+    local chat = current_chat()
+    if chat == nil or chat.chat_input == nil then return end
+    local input = chat.chat_input
+    if vim.api.nvim_get_current_buf() ~= input.bufnr then return end
+    local m = vim.fn.mode():sub(1, 1)
+    local label = mode_labels[m] or { 'OTHER', 'MiniStatuslineModeOther' }
+    local NuiText = require('nui.text')
+    pcall(input.border.set_text, input.border, 'top', NuiText(' ' .. label[1] .. ' ', label[2]), 'center')
+  end
+
+  -- Two-tone banner: the plugin already painted every welcome line amber via
+  -- ChatGPTWelcome; re-paint the wordmark rows white and the tagline dim.
+  local ns = vim.api.nvim_create_namespace('icarus_banner')
+  local function apply_banner_hl()
+    local chat = current_chat()
+    if chat == nil or chat.chat_window == nil then return end
+    local buf = chat.chat_window.bufnr
+    if not vim.api.nvim_buf_is_valid(buf) then return end
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, ICARUS_WING_LINES + 8, false)
+    -- Only touch a fresh session: the first wordmark row is a full block glyph.
+    if not (lines[ICARUS_WING_LINES + 1] or ''):find('██', 1, true) then return end
+    vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+    for i, line in ipairs(lines) do
+      local row = i - 1
+      if row >= ICARUS_WING_LINES then
+        local hl = line:find('██', 1, true) and 'IcarusWord' or 'IcarusTag'
+        vim.api.nvim_buf_set_extmark(buf, ns, row, 0, { end_col = #line, hl_group = hl, priority = 200 })
+      end
+    end
+  end
+
+  local group = vim.api.nvim_create_augroup('IcarusChatUI', { clear = true })
+  vim.api.nvim_create_autocmd({ 'ModeChanged', 'BufEnter' }, {
+    group = group,
+    callback = function() vim.schedule(render_mode) end,
+  })
+
+  -- `:Icarus` is the branded entry point; it opens the chat and paints the
+  -- banner once the popup exists. `:ChatGPT*` commands keep working.
+  vim.api.nvim_create_user_command('Icarus', function()
+    vim.cmd('ChatGPT')
+    vim.defer_fn(function()
+      apply_banner_hl()
+      render_mode()
+    end, 30)
+  end, { desc = 'Open the Icarus chat (local GLM inference)' })
 end)
 
 later(function()

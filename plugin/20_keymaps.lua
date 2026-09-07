@@ -55,12 +55,12 @@ nmap("<leader>da", "<cmd>DBUIAddConnection<cr>", "dadbod add connection")
 nmap("<leader>db", "<cmd>DB<cr>", "dadbod")
 nmap("<leader>dc", "<cmd>DBUIClose<cr>", "dadbod close")
 
---Chatgpt
+--Icarus chat (ChatGPT.nvim on local GLM inference)
 --keymap("n", "<leader>c", ":ChatGPTRunCustomCodeAction<cr>", opts)
-nmap("<C-e>", "<cmd>ChatGPT<cr>", "chatgpt")
-vmap("<C-e>", "<cmd>ChatGPTRun explain_code<cr>", "chatgpt explain")
-vmap("<C-f>", "<cmd>ChatGPTRun fix_bugs<cr>", "chatgpt fix code")
-vmap("<C-t>", "<cmd>ChatGPTRun add_tests<cr>", "chatgpt run tests")
+nmap("<C-e>", "<cmd>Icarus<cr>", "icarus chat")
+vmap("<C-e>", "<cmd>ChatGPTRun explain_code<cr>", "icarus explain")
+vmap("<C-f>", "<cmd>ChatGPTRun fix_bugs<cr>", "icarus fix code")
+vmap("<C-t>", "<cmd>ChatGPTRun add_tests<cr>", "icarus add tests")
 
 -- checkhealth
 nmap("+", "<cmd>checkhealth<cr>", "check health")
