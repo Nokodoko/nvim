@@ -445,6 +445,12 @@ end)
 -- drift apart again.
 local ICARUS_MODEL = 'deepseek-v4.1-flash'
 
+-- Sampling temperature for the paths that write into a BUFFER (edits and every
+-- buffer-mutating :ChatGPTRun action), as opposed to the chat pane, which stays
+-- at 0. Sent client-side on purpose: the server's --override-generation-config
+-- default only applies to requests that omit the field, and these do not.
+local ICARUS_EDIT_TEMPERATURE = 0.2
+
 -- Text rendering of icarus.png: amber wing over the white ICARUS wordmark
 -- (the same mark the icarus web-ui header wears). Lines 1-7 are the wing,
 -- 8-12 the letters; the split drives the two-tone highlight below.
@@ -550,13 +556,14 @@ later(function()
     },
     openai_edit_params = {
       model = ICARUS_MODEL,
-      temperature = 0,
+      temperature = ICARUS_EDIT_TEMPERATURE,
       top_p = 1,
       n = 1,
-      -- Inert: Api.edits builds its request body field by field and never
-      -- reads this table beyond `model`. Suppression still applies, because
-      -- Api.edits routes through Api.chat_completions, which merges
-      -- openai_params above. Kept for symmetry when that changes upstream.
+      -- `temperature` and `top_p` DO reach the wire: code_edits.lua merges this
+      -- whole table into custom_params (tbl_extend "keep"), and Api.edits copies
+      -- exactly model/messages/temperature/top_p out of it. `n` is dropped, and
+      -- so is this kwarg -- suppression still applies only because Api.edits
+      -- routes through Api.chat_completions, which merges openai_params above.
       chat_template_kwargs = { thinking = false },
     },
   })
@@ -570,13 +577,27 @@ later(function()
   -- `The model "gpt-5-mini" does not exist.` read_actions() re-reads its files
   -- on every invocation, so wrap the reader rather than fixing up a table once:
   -- that also covers actions added by a future version of the plugin.
+  --
+  -- The same wrapper pins the edit temperature. Every shipped action is
+  -- type="chat", so they all inherit openai_params.temperature (0) rather than
+  -- openai_edit_params -- but most of them REWRITE THE BUFFER (strategy replace/
+  -- edit/append/prepend/quick_fix) and want the same sampling as an edit. Only
+  -- `display`, which just shows output in a window, stays with the chat value.
+  local BUFFER_STRATEGIES = {
+    replace = true, edit = true, append = true, prepend = true, quick_fix = true,
+  }
   local actions = require('chatgpt.flows.actions')
   local read_actions = actions.read_actions
   actions.read_actions = function()
     local defs = read_actions()
     for _, def in pairs(defs) do
       local params = def.opts and def.opts.params
-      if params then params.model = ICARUS_MODEL end
+      if params then
+        params.model = ICARUS_MODEL
+        if BUFFER_STRATEGIES[def.opts.strategy] then
+          params.temperature = ICARUS_EDIT_TEMPERATURE
+        end
+      end
     end
     return defs
   end

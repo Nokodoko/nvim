@@ -155,7 +155,11 @@ Rules:
     }
     stdin_payload = vim.json.encode({
       model = model.model,
-      temperature = 0,
+      -- This backend's output goes straight into the buffer, so it is an edit
+      -- path and carries the edit temperature (see ICARUS_EDIT_TEMPERATURE in
+      -- plugin/40_plugins.lua). Sent explicitly: the server-side default only
+      -- applies to requests that omit the field.
+      temperature = 0.2,
       max_tokens = 4096,
       -- DeepSeek-V4.1 emits reasoning by default; it burns the token budget
       -- and is useless for buffer insertion. Verified live on monty:8010:
