@@ -416,9 +416,9 @@ later(function()
 end)
 
 -- ChatGPT.nvim (Icarus chat) ===============================================
--- nvim-model:managed model=glm-5.3-flash host=monty:30001
+-- nvim-model:managed model=deepseek-v4.1-flash host=monty:8010
 -- The chat surface is branded "Icarus" because it talks to local inference
--- (the GLM llama-server on `monty`), not OpenAI. The endpoint is
+-- (the DeepSeek-V4.1 vLLM server on `monty`), not OpenAI. The endpoint is
 -- OpenAI-compatible, so only the host + model ids differ from upstream.
 --
 -- Host resolution order (chatgpt/api.lua loadOptionalConfig):
@@ -426,7 +426,12 @@ end)
 -- so exporting OPENAI_API_HOST overrides this without editing the repo.
 --
 -- api_key_cmd is mandatory -- loadRequiredConfig warns and bails without a
--- key. llama.cpp ignores the bearer token, so any non-empty string works.
+-- key. vLLM ENFORCES the bearer token (llama.cpp ignores it), so the real
+-- DSV41_API_KEY must be supplied: awk reads it from the icarus serve.env.
+-- Reasoning suppression: the plugin's openai_params carry no chat_template
+-- kwarg, so DeepSeek-V4.1 streams reasoning_content into the chat pane. The
+-- verified knob is `thinking=false` (see claude_prompt/api.lua); the
+-- llama.cpp spelling `enable_thinking=false` does NOT work on vLLM.
 -- NOTE: *_cmd strings are split on whitespace and exec'd directly (no shell),
 -- so shell syntax (${VAR:-x}, pipes, globs) will NOT expand here.
 --
@@ -434,6 +439,11 @@ end)
 -- chat.*). The older chat_window / chat_input / top-level welcome_message keys
 -- are silently ignored by the plugin, which is why the previous config's
 -- titles never showed.
+
+-- The only model this endpoint serves. Referenced wherever a model id has to
+-- be sent, so the three request paths (chat, edit, :ChatGPTRun actions) cannot
+-- drift apart again.
+local ICARUS_MODEL = 'deepseek-v4.1-flash'
 
 -- Text rendering of icarus.png: amber wing over the white ICARUS wordmark
 -- (the same mark the icarus web-ui header wears). Lines 1-7 are the wing,
@@ -453,7 +463,7 @@ local ICARUS_BANNER = [[
  ██  ██     ██   ██ ██  ██  ██  ██     ██
  ██  ██████ ██   ██ ██   ██ ██████ ██████
 
-        local inference · glm-5.3-flash @ monty
+        local inference · deepseek-v4.1-flash @ monty
 ]]
 
 later(function()
@@ -469,9 +479,18 @@ later(function()
   -- the wing colour and overlay the letters afterwards (see apply_banner_hl).
   vim.api.nvim_set_hl(0, 'ChatGPTWelcome', { link = 'IcarusWing' })
 
+  -- $OPENAI_API_KEY BEATS api_key_cmd: loadRequiredConfig (chatgpt/api.lua)
+  -- checks the environment first and only falls back to the command when the
+  -- variable is unset. An inherited cloud key therefore wins silently and vLLM
+  -- answers {"error":"Unauthorized"} -- the key is never even wrong-looking in
+  -- the config. Hide it for the duration of setup() (api.setup() reads the env
+  -- synchronously) and restore it, so :terminal and child jobs keep seeing it.
+  local inherited_openai_key = vim.env.OPENAI_API_KEY
+  vim.env.OPENAI_API_KEY = nil
+
   require('chatgpt').setup({
-    api_host_cmd = 'echo http://monty:30001',
-    api_key_cmd = 'echo local-no-auth',
+    api_host_cmd = 'echo http://monty:8010',
+    api_key_cmd = 'awk -F= /DSV41_API_KEY/{print$2} /home/n0ko/.config/icarus/serve.env',
     yank_register = '+',
     chat = {
       welcome_message = ICARUS_BANNER,
@@ -497,7 +516,7 @@ later(function()
       border = {
         highlight = 'FloatBorder',
         style = 'rounded',
-        text = { top = ' ICARUS · glm-5.3-flash @ monty:30001 ' }, -- nvim-model:title
+        text = { top = ' ICARUS · deepseek-v4.1-flash @ monty:8010 ' }, -- nvim-model:title
       },
       buf_options = { filetype = 'markdown' },
     },
@@ -516,21 +535,51 @@ later(function()
       border = { style = 'rounded', text = { top = ' Settings ' } },
     },
     openai_params = {
-      model = 'glm-5.3-flash',
+      model = ICARUS_MODEL,
       frequency_penalty = 0,
       presence_penalty = 0,
       max_tokens = 4096,
       temperature = 0,
       top_p = 1,
       n = 1,
+      -- DeepSeek-V4.1 streams reasoning_content by default; it burns the
+      -- token budget and clutters the chat pane. Verified live on monty:8010:
+      -- `thinking=false` suppresses it (0 reasoning tokens); the llama.cpp
+      -- spelling `enable_thinking=false` does NOT on this vLLM endpoint.
+      chat_template_kwargs = { thinking = false },
     },
     openai_edit_params = {
-      model = 'glm-5.3-flash',
+      model = ICARUS_MODEL,
       temperature = 0,
       top_p = 1,
       n = 1,
+      -- Inert: Api.edits builds its request body field by field and never
+      -- reads this table beyond `model`. Suppression still applies, because
+      -- Api.edits routes through Api.chat_completions, which merges
+      -- openai_params above. Kept for symmetry when that changes upstream.
+      chat_template_kwargs = { thinking = false },
     },
   })
+
+  vim.env.OPENAI_API_KEY = inherited_openai_key
+
+  -- :ChatGPTRun actions carry their OWN model id, hardcoded per action in the
+  -- plugin's actions.json ("params": {"model": "gpt-5-mini"}), and
+  -- Api.chat_completions merges with vim.tbl_extend("keep", custom, openai) --
+  -- so the action's id WINS over openai_params and monty answers
+  -- `The model "gpt-5-mini" does not exist.` read_actions() re-reads its files
+  -- on every invocation, so wrap the reader rather than fixing up a table once:
+  -- that also covers actions added by a future version of the plugin.
+  local actions = require('chatgpt.flows.actions')
+  local read_actions = actions.read_actions
+  actions.read_actions = function()
+    local defs = read_actions()
+    for _, def in pairs(defs) do
+      local params = def.opts and def.opts.params
+      if params then params.model = ICARUS_MODEL end
+    end
+    return defs
+  end
 
   -- Vim-mode indicator ---------------------------------------------------------
   -- The prompt popup is a floating window: it has no statusline, and

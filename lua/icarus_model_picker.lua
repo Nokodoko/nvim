@@ -11,12 +11,15 @@
 
 local M = {}
 
--- Last-known-good snapshot, used only when the live fetch fails.
+-- Last-known-good snapshot, used only when the live fetch fails. Refreshed
+-- 2026-09-14 against GET /provider: the old `vllm-monty/qwen3.6-35b-a3b` had
+-- no counterpart in the catalog any more, so falling back produced a pin that
+-- no provider would resolve.
 local fallback_entries = {
   'anthropic/claude-fable-5',
   'anthropic/claude-opus-4-8',
   'openai-codex/gpt-5.5',
-  'vllm-monty/qwen3.6-35b-a3b',
+  'vllm-monty-dsv41/deepseek-v4.1-flash',
 }
 
 --- Open the provider/model telescope picker.

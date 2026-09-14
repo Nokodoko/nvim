@@ -11,15 +11,39 @@ M.config = {
 --   backend = 'claude'  -> shells out to `claude -p --model <id>`
 --   backend = 'openai'  -> POSTs to an OpenAI-compatible /v1/chat/completions
 --                          (local inference; `host` + `model` are the target)
--- 'icarus' is the default: the GLM llama-server on monty, the same endpoint
--- the :Icarus chat uses (see plugin/40_plugins.lua, nvim-model:managed).
+-- 'icarus' is the default: the DeepSeek-V4.1 vLLM server on monty, the same
+-- endpoint the :Icarus chat uses (see plugin/40_plugins.lua, nvim-model:managed).
 M.models = {
   { name = 'icarus', id = 'icarus', backend = 'openai',
-    host = 'http://monty:30001', model = 'glm-5.3-flash' },
+    host = 'http://monty:8010', model = 'deepseek-v4.1-flash' },
   { name = 'Sonnet 4.5', id = 'sonnet', backend = 'claude' },
   { name = 'Opus 4.6', id = 'opus', backend = 'claude' },
   { name = 'Haiku 4.5', id = 'haiku', backend = 'claude' },
 }
+
+-- Bearer token for the vLLM-served DeepSeek endpoint (monty:8010). Unlike
+-- llama.cpp, vLLM ENFORCES auth, so a placeholder key is not enough.
+-- $DSV41_API_KEY first (the same variable icarus reads -- api_key_env in
+-- ~/.icarus/settings.json), then the serve.env it is defined in, parsed with
+-- awk rather than a shell (vim.fn.system runs argv directly). Cached: this
+-- sits on the path of every request and cannot change within a session.
+local cached_api_key = nil
+
+function M.api_key()
+  if cached_api_key then return cached_api_key end
+
+  local key = vim.env.DSV41_API_KEY
+  if not key or key == '' then
+    local out = vim.fn.system({
+      'awk', '-F=', '/DSV41_API_KEY/{print$2}',
+      vim.fn.expand('~/.config/icarus/serve.env'),
+    })
+    key = (out or ''):gsub('^%s+', ''):gsub('%s+$', '')
+  end
+
+  cached_api_key = key
+  return key
+end
 
 -- Look up the model table entry for the active model
 function M.current_model()
@@ -125,6 +149,7 @@ Rules:
     cmd = {
       'curl', '-sS', '--max-time', '180',
       '-H', 'Content-Type: application/json',
+      '-H', 'Authorization: Bearer ' .. M.api_key(),
       '-d', '@-',
       model.host .. '/v1/chat/completions',
     }
@@ -132,9 +157,11 @@ Rules:
       model = model.model,
       temperature = 0,
       max_tokens = 4096,
-      -- GLM emits reasoning_content by default; it burns the token budget
-      -- and is useless for buffer insertion. llama.cpp honours this kwarg.
-      chat_template_kwargs = { enable_thinking = false },
+      -- DeepSeek-V4.1 emits reasoning by default; it burns the token budget
+      -- and is useless for buffer insertion. Verified live on monty:8010:
+      -- `thinking=false` suppresses it (0 reasoning tokens); the llama.cpp
+      -- spelling `enable_thinking=false` does NOT on this vLLM endpoint.
+      chat_template_kwargs = { thinking = false },
       messages = {
         { role = 'system', content = system_prompt },
         { role = 'user', content = user_prompt },
