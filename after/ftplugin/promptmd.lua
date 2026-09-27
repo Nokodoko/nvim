@@ -29,3 +29,9 @@ if ok then
     },
   }
 end
+
+-- Markup tag editing (see lua/xml_surround.lua). after/ftplugin/markdown.lua
+-- has already run for this compound filetype and registered its own `L`
+-- surrounding, which `setup_buffer()` preserves by merging into the existing
+-- `vim.b.minisurround_config` rather than replacing it.
+require('xml_surround').setup_buffer()
