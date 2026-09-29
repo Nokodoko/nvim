@@ -454,6 +454,13 @@ later(function()
   -- set vim.b.minuet_virtual_text_auto_trigger here -- arming buffers is what
   -- re-enabled auto-trigger and brought back the ~5s UI freezes (the leftover
   -- arming loop from the auto-trigger era was removed for exactly that reason).
+
+  -- Fast path: replace minuet's per-request `curl` spawn (a synchronous
+  -- fork+exec on the UI loop: ~1.5 ms warm, 15-65 ms cold -- the pause felt
+  -- when a suggestion fires) with a pure vim.loop TCP client, and its
+  -- full-buffer context scan with a windowed read. See lua/icarus_minuet_fast.lua
+  -- for the measurements and the fallback semantics.
+  require('icarus_minuet_fast').apply()
 end)
 
 -- ChatGPT.nvim (Icarus chat) ===============================================
