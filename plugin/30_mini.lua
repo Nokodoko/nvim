@@ -853,11 +853,27 @@ later(function() require('mini.pick').setup() end)
 later(function()
   -- Define language patterns to work better with 'friendly-snippets'
   local latex_patterns = { 'latex/**/*.json', '**/latex.json' }
+  -- Sparse-attention prompting uses BOTH markdown headings (`#`/`##`) and XML
+  -- tag headings (`<summary>`/`</summary>`), and `.md`, `.xml` and `.xmd` all
+  -- mix the two. mini.snippets resolves snippet files by the tree-sitter
+  -- language at the cursor (see `MiniSnippets.default_prepare`), so a markdown
+  -- buffer would otherwise never see the XML tag snippets in `xml.json` and an
+  -- xml buffer would never see the markdown heading snippets in `markdown.json`.
+  -- Aliasing each markup language to load BOTH files makes every one of
+  -- `.md`/`.xml`/`.xmd` offer markdown headings AND xml tags. An alias
+  -- REPLACES a language's default patterns, so each entry lists every file it
+  -- needs (markdown keeps its `.lua` dynamic loader too). `promptmd` is listed
+  -- defensively: a promptmd buffer usually resolves to `markdown` at the
+  -- cursor, but a node owned by the promptmd root tree resolves to `promptmd`.
+  local markup_snippets = { '**/markdown.json', '**/markdown.lua', '**/xml.json' }
   local lang_patterns = {
     tex = latex_patterns,
     plaintex = latex_patterns,
     -- Recognize special injected language of markdown tree-sitter parser
     markdown_inline = { 'markdown.json' },
+    markdown = markup_snippets,
+    xml = markup_snippets,
+    promptmd = markup_snippets,
   }
 
   local snippets = require('mini.snippets')
@@ -869,7 +885,10 @@ later(function()
       -- Load from 'snippets/' directory of plugins, like 'friendly-snippets'
       snippets.gen_loader.from_lang({ lang_patterns = lang_patterns }),
       -- Load filetype-specific snippets from 'after/snippets/' directory
-      snippets.gen_loader.from_lang({ path = config_path .. '/after/snippets' }),
+      -- (resolved via runtimepath; the markup aliases above are passed here too
+      -- so an xml buffer also picks up after/snippets/markdown.json and a
+      -- markdown buffer also picks up after/snippets/xml.json)
+      snippets.gen_loader.from_lang({ path = config_path .. '/after/snippets', lang_patterns = lang_patterns }),
     },
     -- Disable default <C-j> expand mapping (use Tab or custom mapping instead)
     mappings = { expand = '', jump_next = '', jump_prev = '' },
