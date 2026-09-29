@@ -171,6 +171,21 @@ now(function()
     return enabled and '' or '[fmt off]'
   end
 
+  -- Custom section showing the estimated prompt-token count of the buffer
+  -- (see lua/chunked.lua). Returns '' for filetypes Chunk doesn't measure,
+  -- so the section costs a table lookup on other filetypes. The count is
+  -- cached on b:changedtick inside token_count(), which matters because the
+  -- statusline redraws on every cursor move while a full scan costs ~1ms on
+  -- an 8k-line buffer.
+  local token_status = function()
+    local ok, chunked = pcall(require, 'chunked')
+    if not ok then return '' end
+    local tokens = chunked.token_count()
+    if not tokens then return '' end
+    if tokens >= 1000 then return string.format('~%.1fk tok', tokens / 1000) end
+    return string.format('~%d tok', tokens)
+  end
+
   require('mini.statusline').setup({
     content = {
       active = function()
@@ -184,6 +199,7 @@ now(function()
         local location = MiniStatusline.section_location({ trunc_width = 75 })
         local search = MiniStatusline.section_searchcount({ trunc_width = 75 })
         local fmt = format_status()
+        local tokens = token_status()
 
         return MiniStatusline.combine_groups({
           { hl = mode_hl, strings = { mode } },
@@ -191,7 +207,7 @@ now(function()
           '%<', -- Truncation point
           { hl = 'MiniStatuslineFilename', strings = { filename } },
           '%=', -- End left alignment
-          { hl = 'MiniStatuslineFileinfo', strings = { fmt, fileinfo } },
+          { hl = 'MiniStatuslineFileinfo', strings = { fmt, tokens, fileinfo } },
           { hl = mode_hl, strings = { search, location } },
         })
       end,

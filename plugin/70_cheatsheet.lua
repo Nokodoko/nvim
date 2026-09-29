@@ -115,6 +115,14 @@ M.binds = {
     },
   },
   {
+    name = 'Chunk visualizer (prompt budget)',
+    binds = {
+      { '<leader>ct', 'Toggle chunk view (current buffer)' },
+      { '<leader>ca', 'Re-analyze chunks now' },
+      { '<leader>co', 'Chunk view off' },
+    },
+  },
+  {
     name = 'UI toggles',
     binds = {
       { '<leader>uf', 'Toggle autoformat (global)' },
