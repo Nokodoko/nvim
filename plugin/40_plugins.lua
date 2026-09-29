@@ -321,19 +321,28 @@ later(function()
 end)
 
 -- minuet-ai.nvim (local inline completion) ==================================
--- nvim-model:managed model=qwen3-next-80b-abliterated host=cai:8090
+-- nvim-model:managed model=qwen3.8-flash-next host=monty:8085
 --
--- Replaces GitHub Copilot with the local llama.cpp server on `cai`
--- (Qwen3-30B-A3B-Instruct-2507, 98k ctx). copilot.lua could NOT be reused:
--- its config surface (auth_provider_url / copilot_model / server.custom_
--- server_filepath) has no inference-endpoint knob -- it always speaks
--- GitHub's proprietary Copilot LSP protocol. minuet's `openai_compatible`
--- provider takes a raw end_point, so it talks to llama.cpp directly.
+-- Replaces GitHub Copilot with the Qwen3.8-Flash-Next llama.cpp server on
+-- `monty` -- the same weights the :Icarus chat and the icarus harness run, so
+-- completion, chat and the agents all reason over one model. copilot.lua could
+-- NOT be reused: its config surface (auth_provider_url / copilot_model /
+-- server.custom_server_filepath) has no inference-endpoint knob -- it always
+-- speaks GitHub's proprietary Copilot LSP protocol. minuet's
+-- `openai_compatible` provider takes a raw end_point, so it talks to llama.cpp
+-- directly.
 --
--- No subscription and no `:Copilot auth` step -- llama.cpp ignores the
--- bearer token, so api_key returns a constant. (minuet treats a STRING
--- api_key as an env-var *name* and a FUNCTION as the literal key --
--- see minuet/utils.lua get_api_key.)
+-- Why :8085 (`llamacpp-monty-qwen1`) and not :8084 (`-qwen0`): both serve
+-- identical weights, but :8084 is icarus's default_provider AND its
+-- tool_model_pins "*", i.e. every agent turn and tool call queues there. An
+-- interactive completion should not sit behind that. :8085 only carries
+-- compaction (bursty, rare) and measured marginally faster. Flip the port if
+-- that ever inverts.
+--
+-- No subscription and no `:Copilot auth` step -- llama.cpp ignores the bearer
+-- token, so api_key returns a constant. (minuet treats a STRING api_key as an
+-- env-var *name* and a FUNCTION as the literal key -- see minuet/utils.lua
+-- get_api_key.)
 --
 -- Usage:
 -- - MANUAL TRIGGER ONLY (auto-trigger froze the UI ~5s per request):
@@ -360,26 +369,58 @@ later(function()
     provider = 'openai_compatible',
     provider_options = {
       openai_compatible = {
-        end_point = 'http://cai:8090/v1/chat/completions',
-        model = 'qwen3-next-80b-abliterated',
-        name = 'cai',
+        end_point = 'http://monty:8085/v1/chat/completions',
+        model = 'qwen3.8-flash-next',
+        name = 'monty',
         -- Function form => used verbatim as the key. llama.cpp ignores it,
         -- but minuet aborts the request when the key resolves to nil.
         api_key = function() return 'local-no-auth' end,
         stream = true,
         optional = {
           max_tokens = 256,
+          -- MANDATORY, not cosmetic. `optional` is tbl_deep_extend'd onto the
+          -- request body (minuet/backends/openai_base.lua), so this reaches
+          -- llama.cpp. Qwen3.8 thinks by default, and minuet's stream/no-stream
+          -- decoders read ONLY `.content` -- they never look at
+          -- `reasoning_content`. Measured on monty with a real 8.4k-token
+          -- buffer: thinking ON spent all 256 budget on reasoning, returned
+          -- content="" with finish_reason=length, i.e. completion silently
+          -- returns NOTHING. With enable_thinking=false the same request
+          -- answers in ~0.2s (warm). Spelling matters: this llama.cpp build
+          -- ignores the vLLM `thinking=false` form.
+          chat_template_kwargs = { enable_thinking = false },
+        },
+        -- Follow icarus's LIVE web model (lua/icarus_endpoint.lua): minuet runs
+        -- `transform` on every request, after `optional` is merged, so a
+        -- /swap or /fleet in icarus repoints completion on the next keypress.
+        -- The end_point/model above are only the fallback when icarus serve
+        -- cannot be asked.
+        transform = {
+          function(req)
+            local ep = require('icarus_endpoint').resolve({
+              model = 'qwen3.8-flash-next', base = 'http://monty:8085', key = 'local-no-auth',
+            })
+            req.end_point = ep.base .. '/v1/chat/completions'
+            req.headers['Authorization'] = 'Bearer ' .. ep.key
+            req.body.model = ep.model
+            req.body.chat_template_kwargs = require('icarus_endpoint').no_thinking
+            return req
+          end,
         },
       },
     },
 
-    -- Latency budget, measured on cai (llama.cpp/Vulkan): ~1884 tok/s prompt
-    -- eval, ~69 tok/s generation.
+    -- Latency budget, measured on monty:8085 (llama.cpp) 2026-09-20 with a
+    -- real 8.4k-token config buffer: ~2100 tok/s prompt eval, ~90-220 tok/s
+    -- generation, ~5.4s cold / ~0.2s warm end to end. (The previous cai:8090
+    -- endpoint measured ~10.4s for the identical prompt -- roughly 2x slower.)
     --
     -- request_timeout becomes curl `--max-time`. The 3s default killed EVERY
     -- request on a real buffer: a 26k-char context is ~9900 prompt tokens and
     -- needs ~9s end to end. Nothing streams until prompt eval completes (5.3s),
-    -- so a 3s cap produced zero tokens rather than a partial completion.
+    -- so a 3s cap produced zero tokens rather than a partial completion. Kept
+    -- at 30: cold prompt eval on a large buffer still lands in seconds, and the
+    -- timeout only has to cover the worst case, not the common one.
     request_timeout = 30,
     -- The chat backend encodes n_completions candidates into ONE response, so
     -- the default of 3 costs ~3x the generation time. One keeps it responsive.
@@ -416,22 +457,30 @@ later(function()
 end)
 
 -- ChatGPT.nvim (Icarus chat) ===============================================
--- nvim-model:managed model=deepseek-v4.1-flash host=monty:8010
+-- nvim-model:managed model=qwen3.8-flash-next host=monty:8084
 -- The chat surface is branded "Icarus" because it talks to local inference
--- (the DeepSeek-V4.1 vLLM server on `monty`), not OpenAI. The endpoint is
--- OpenAI-compatible, so only the host + model ids differ from upstream.
+-- (the Qwen3.8-Flash-Next llama.cpp server on `monty`), not OpenAI. The
+-- endpoint is OpenAI-compatible, so only the host + model ids differ from
+-- upstream.
 --
 -- Host resolution order (chatgpt/api.lua loadOptionalConfig):
 --   1. $OPENAI_API_HOST if set   2. api_host_cmd below
 -- so exporting OPENAI_API_HOST overrides this without editing the repo.
 --
+-- monty:8084 is icarus's `llamacpp-monty-qwen0` (see ~/.icarus/settings.json,
+-- default_provider) -- the same endpoint icarus itself runs on, so the chat
+-- pane and the harness cannot drift onto different GPUs. It declares 262k ctx;
+-- the sibling monty:8085 (`-qwen1`) serves the same weights at 64k.
+--
 -- api_key_cmd is mandatory -- loadRequiredConfig warns and bails without a
--- key. vLLM ENFORCES the bearer token (llama.cpp ignores it), so the real
--- DSV41_API_KEY must be supplied: awk reads it from the icarus serve.env.
--- Reasoning suppression: the plugin's openai_params carry no chat_template
--- kwarg, so DeepSeek-V4.1 streams reasoning_content into the chat pane. The
--- verified knob is `thinking=false` (see claude_prompt/api.lua); the
--- llama.cpp spelling `enable_thinking=false` does NOT work on vLLM.
+-- key -- but llama.cpp does NOT enforce the bearer token (vLLM, which this
+-- config used before, did), so a constant is enough and serve.env is no longer
+-- read here.
+-- Reasoning suppression: Qwen3.8 emits reasoning_content by default and it
+-- burns the token budget and clutters the chat pane. The verified knob on this
+-- llama.cpp endpoint is `enable_thinking=false`; the vLLM spelling
+-- `thinking=false` is silently IGNORED here (re-verified 2026-09-20 against
+-- monty:8084 -- see claude_prompt/api.lua).
 -- NOTE: *_cmd strings are split on whitespace and exec'd directly (no shell),
 -- so shell syntax (${VAR:-x}, pipes, globs) will NOT expand here.
 --
@@ -443,12 +492,12 @@ end)
 -- The only model this endpoint serves. Referenced wherever a model id has to
 -- be sent, so the three request paths (chat, edit, :ChatGPTRun actions) cannot
 -- drift apart again.
-local ICARUS_MODEL = 'deepseek-v4.1-flash'
+local ICARUS_MODEL = 'qwen3.8-flash-next'
 
 -- Sampling temperature for the paths that write into a BUFFER (edits and every
 -- buffer-mutating :ChatGPTRun action), as opposed to the chat pane, which stays
--- at 0. Sent client-side on purpose: the server's --override-generation-config
--- default only applies to requests that omit the field, and these do not.
+-- at 0. Sent client-side on purpose: a server-side default only applies to
+-- requests that omit the field, and these do not.
 local ICARUS_EDIT_TEMPERATURE = 0.2
 
 -- Text rendering of icarus.png: amber wing over the white ICARUS wordmark
@@ -469,7 +518,7 @@ local ICARUS_BANNER = [[
  ██  ██     ██   ██ ██  ██  ██  ██     ██
  ██  ██████ ██   ██ ██   ██ ██████ ██████
 
-        local inference · deepseek-v4.1-flash @ monty
+        local inference · qwen3.8-flash-next @ monty:8084
 ]]
 
 later(function()
@@ -487,16 +536,18 @@ later(function()
 
   -- $OPENAI_API_KEY BEATS api_key_cmd: loadRequiredConfig (chatgpt/api.lua)
   -- checks the environment first and only falls back to the command when the
-  -- variable is unset. An inherited cloud key therefore wins silently and vLLM
-  -- answers {"error":"Unauthorized"} -- the key is never even wrong-looking in
-  -- the config. Hide it for the duration of setup() (api.setup() reads the env
-  -- synchronously) and restore it, so :terminal and child jobs keep seeing it.
+  -- variable is unset. llama.cpp ignores the bearer header, so an inherited
+  -- cloud key is now harmless -- but hiding it keeps the wire request
+  -- byte-identical to what this config intends, and would still be load-bearing
+  -- if the endpoint ever went back to an auth-enforcing server. Hide it for the
+  -- duration of setup() (api.setup() reads the env synchronously) and restore
+  -- it, so :terminal and child jobs keep seeing it.
   local inherited_openai_key = vim.env.OPENAI_API_KEY
   vim.env.OPENAI_API_KEY = nil
 
   require('chatgpt').setup({
-    api_host_cmd = 'echo http://monty:8010',
-    api_key_cmd = 'awk -F= /DSV41_API_KEY/{print$2} /home/n0ko/.config/icarus/serve.env',
+    api_host_cmd = 'echo http://monty:8084',
+    api_key_cmd = 'echo local-no-auth',
     yank_register = '+',
     chat = {
       welcome_message = ICARUS_BANNER,
@@ -522,7 +573,7 @@ later(function()
       border = {
         highlight = 'FloatBorder',
         style = 'rounded',
-        text = { top = ' ICARUS · deepseek-v4.1-flash @ monty:8010 ' }, -- nvim-model:title
+        text = { top = ' ICARUS · qwen3.8-flash-next @ monty:8084 ' }, -- nvim-model:title
       },
       buf_options = { filetype = 'markdown' },
     },
@@ -548,11 +599,11 @@ later(function()
       temperature = 0,
       top_p = 1,
       n = 1,
-      -- DeepSeek-V4.1 streams reasoning_content by default; it burns the
-      -- token budget and clutters the chat pane. Verified live on monty:8010:
-      -- `thinking=false` suppresses it (0 reasoning tokens); the llama.cpp
-      -- spelling `enable_thinking=false` does NOT on this vLLM endpoint.
-      chat_template_kwargs = { thinking = false },
+      -- Qwen3.8 streams reasoning_content by default; it burns the token
+      -- budget and clutters the chat pane. Verified live on monty:8084:
+      -- `enable_thinking=false` suppresses it (0 reasoning tokens); the vLLM
+      -- spelling `thinking=false` is IGNORED by llama.cpp and leaks reasoning.
+      chat_template_kwargs = { enable_thinking = false },
     },
     openai_edit_params = {
       model = ICARUS_MODEL,
@@ -564,11 +615,37 @@ later(function()
       -- exactly model/messages/temperature/top_p out of it. `n` is dropped, and
       -- so is this kwarg -- suppression still applies only because Api.edits
       -- routes through Api.chat_completions, which merges openai_params above.
-      chat_template_kwargs = { thinking = false },
+      chat_template_kwargs = { enable_thinking = false },
     },
   })
 
   vim.env.OPENAI_API_KEY = inherited_openai_key
+
+  -- Follow icarus's LIVE web model (lua/icarus_endpoint.lua). setup() binds
+  -- the host and key once, from api_host_cmd/api_key_cmd above -- those are
+  -- now only the fallback. Every request path (chat, edits, :ChatGPTRun
+  -- actions) funnels through Api.chat_completions or Api.completions and
+  -- reads the URL/header fields at call time, so re-point them there and let
+  -- the live model id win over openai_params and the per-action ids.
+  local Api = require('chatgpt.api')
+  local function follow_icarus(custom_params)
+    local ep = require('icarus_endpoint').resolve({
+      model = ICARUS_MODEL, base = 'http://monty:8084', key = 'local-no-auth',
+    })
+    Api.COMPLETIONS_URL = ep.base .. '/v1/completions'
+    Api.CHAT_COMPLETIONS_URL = ep.base .. '/v1/chat/completions'
+    Api.AUTHORIZATION_HEADER = 'Authorization: Bearer ' .. ep.key
+    custom_params.model = ep.model
+    custom_params.chat_template_kwargs = require('icarus_endpoint').no_thinking
+    return custom_params
+  end
+  local chat_completions, completions = Api.chat_completions, Api.completions
+  Api.chat_completions = function(custom_params, ...)
+    return chat_completions(follow_icarus(custom_params), ...)
+  end
+  Api.completions = function(custom_params, ...)
+    return completions(follow_icarus(custom_params), ...)
+  end
 
   -- :ChatGPTRun actions carry their OWN model id, hardcoded per action in the
   -- plugin's actions.json ("params": {"model": "gpt-5-mini"}), and

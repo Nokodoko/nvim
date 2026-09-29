@@ -142,7 +142,7 @@ function M.harness_body(agent_count)
     '',
     '## Agents in Use',
     '<!-- number of agents, server color, and position in the harness build -->',
-    '<!-- provider/model: openai-codex = default; deepseek-v4-flash-distill = quota-fallback -->',
+    '<!-- provider/model: openai-codex = default; llamacpp-monty-qwen0/qwen3.8-flash-next = quota-fallback -->',
     '<!-- pi-claude MUST be claude-opus-4-8 (NOT claude-fable-5 -> 404) -->',
     '',
   })
@@ -215,7 +215,7 @@ function M.project_body(agent_count)
     '',
     '## Agent Roster',
     '<!-- each agent: role / model / color -->',
-    '<!-- provider/model: openai-codex = default; deepseek-v4-flash-distill = quota-fallback -->',
+    '<!-- provider/model: openai-codex = default; llamacpp-monty-qwen0/qwen3.8-flash-next = quota-fallback -->',
     '<!-- pi-claude MUST be claude-opus-4-8 (NOT claude-fable-5 -> 404) -->',
     '',
   })

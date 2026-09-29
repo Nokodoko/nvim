@@ -119,6 +119,7 @@ vim.filetype.add({
     yaml = "yaml.jinja2",
     yml = "yaml.jinja2",
     md = detect_markdown_variant,
+    xmd = detect_markdown_variant,
   },
   pattern = {
     -- Helm (higher priority than default yaml.jinja2)

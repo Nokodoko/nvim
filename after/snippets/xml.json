@@ -1,0 +1,37 @@
+{
+  "XML tag": {
+    "prefix": "tag",
+    "body": ["<$1>$2</$1>$0"],
+    "description": "XML element: open + close tag, name typed once"
+  },
+  "XML self-closing tag": {
+    "prefix": "tagx",
+    "body": ["<$1$2/>$0"],
+    "description": "Self-closing XML element"
+  },
+  "XML section": {
+    "prefix": "section",
+    "body": ["<$1>", "\t$2", "</$1>$0"],
+    "description": "XML section: tag on its own lines with an indented body"
+  },
+  "XML attribute": {
+    "prefix": "attr",
+    "body": ["$1=\"$2\"$0"],
+    "description": "XML attribute name=\"value\""
+  },
+  "XML CDATA": {
+    "prefix": "cdata",
+    "body": ["<![CDATA[$1]]>$0"],
+    "description": "XML CDATA block"
+  },
+  "XML comment": {
+    "prefix": "comment",
+    "body": ["<!-- $1 -->$0"],
+    "description": "XML comment"
+  },
+  "XML declaration": {
+    "prefix": "decl",
+    "body": ["<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "$0"],
+    "description": "XML declaration prolog"
+  }
+}

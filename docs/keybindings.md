@@ -100,6 +100,14 @@
 | `<C-f>` | Fix bugs (visual selection) |
 | `<C-t>` | Add tests (visual selection) |
 
+## Chunk visualizer (prompt budget)
+
+| Keys | Action |
+|---|---|
+| `<leader>ct` | Toggle chunk view (current buffer) |
+| `<leader>ca` | Re-analyze chunks now |
+| `<leader>co` | Chunk view off |
+
 ## UI toggles
 
 | Keys | Action |

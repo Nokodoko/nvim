@@ -11,18 +11,12 @@
 
 local M = {}
 
--- Last-known-good snapshot, used only when the live fetch fails. Refreshed
--- 2026-09-20 against GET /provider: `vllm-monty-dsv41/deepseek-v4.1-flash` is
--- still in the catalog but its server (monty:8010) is DOWN, so the fallback now
--- leads with the endpoint that actually answers -- icarus's default_provider.
--- The same staleness that made the old `vllm-monty/qwen3.6-35b-a3b` pin
--- unresolvable applies here: re-check this list against /provider when it next
--- goes stale.
+-- Last-known-good snapshot, used only when the live fetch fails.
 local fallback_entries = {
-  'llamacpp-monty-qwen0/qwen3.8-flash-next',
   'anthropic/claude-fable-5',
   'anthropic/claude-opus-4-8',
   'openai-codex/gpt-5.5',
+  'vllm-monty-laguna/qwen3.6-35b-a3b',
 }
 
 --- Open the provider/model telescope picker.

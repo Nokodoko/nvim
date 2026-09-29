@@ -334,7 +334,8 @@ nmap_leader('uF', toggle_autoformat_buffer,  'Toggle format (buffer)')
 
 -- minuet completion toggles (requires minuet-ai.nvim to be loaded)
 -- Replaced the old Copilot toggles: copilot.lua cannot target a local
--- endpoint, so inline completion now runs on minuet against `cai`.
+-- endpoint, so inline completion now runs on minuet against monty
+-- (qwen3.8-flash-next; see the minuet block in 40_plugins.lua).
 local toggle_minuet = function()
   local ok, vt = pcall(require, 'minuet.virtualtext')
   if not ok then

@@ -11,38 +11,27 @@ M.config = {
 --   backend = 'claude'  -> shells out to `claude -p --model <id>`
 --   backend = 'openai'  -> POSTs to an OpenAI-compatible /v1/chat/completions
 --                          (local inference; `host` + `model` are the target)
--- 'icarus' is the default: the DeepSeek-V4.1 vLLM server on monty, the same
--- endpoint the :Icarus chat uses (see plugin/40_plugins.lua, nvim-model:managed).
+-- 'icarus' is the default: the Qwen3.8-Flash-Next llama.cpp server on monty
+-- (icarus provider `llamacpp-monty-qwen0`), the same endpoint the :Icarus chat
+-- uses (see plugin/40_plugins.lua, nvim-model:managed).
 M.models = {
   { name = 'icarus', id = 'icarus', backend = 'openai',
-    host = 'http://monty:8010', model = 'deepseek-v4.1-flash' },
+    host = 'http://monty:8084', model = 'qwen3.8-flash-next' },
   { name = 'Sonnet 4.5', id = 'sonnet', backend = 'claude' },
   { name = 'Opus 4.6', id = 'opus', backend = 'claude' },
   { name = 'Haiku 4.5', id = 'haiku', backend = 'claude' },
 }
 
--- Bearer token for the vLLM-served DeepSeek endpoint (monty:8010). Unlike
--- llama.cpp, vLLM ENFORCES auth, so a placeholder key is not enough.
--- $DSV41_API_KEY first (the same variable icarus reads -- api_key_env in
--- ~/.icarus/settings.json), then the serve.env it is defined in, parsed with
--- awk rather than a shell (vim.fn.system runs argv directly). Cached: this
--- sits on the path of every request and cannot change within a session.
+-- llama.cpp (monty:8084) does not enforce a bearer token, so a constant is
+-- enough here. The previous endpoint was a vLLM server that DID enforce one and
+-- read DSV41_API_KEY out of ~/.config/icarus/serve.env; that indirection is
+-- gone. It is kept as a function (not a literal) so swapping back to an
+-- auth-enforcing endpoint is a one-line change on the request path below.
 local cached_api_key = nil
 
 function M.api_key()
-  if cached_api_key then return cached_api_key end
-
-  local key = vim.env.DSV41_API_KEY
-  if not key or key == '' then
-    local out = vim.fn.system({
-      'awk', '-F=', '/DSV41_API_KEY/{print$2}',
-      vim.fn.expand('~/.config/icarus/serve.env'),
-    })
-    key = (out or ''):gsub('^%s+', ''):gsub('%s+$', '')
-  end
-
-  cached_api_key = key
-  return key
+  if not cached_api_key then cached_api_key = 'local-no-auth' end
+  return cached_api_key
 end
 
 -- Look up the model table entry for the active model
@@ -146,10 +135,18 @@ Rules:
   -- receive their payload on stdin so nothing is shell-escaped into argv.
   local cmd, stdin_payload, parse
   if model.backend == 'openai' then
+    -- The 'icarus' entry follows icarus's LIVE web model (lua/icarus_endpoint.lua),
+    -- so a /swap or /fleet repoints it; its static host/model are the fallback.
+    local key = M.api_key()
+    if model.id == 'icarus' then
+      local ep = require('icarus_endpoint').resolve({ base = model.host, model = model.model, key = key })
+      model = vim.tbl_extend('force', model, { host = ep.base, model = ep.model })
+      key = ep.key
+    end
     cmd = {
       'curl', '-sS', '--max-time', '180',
       '-H', 'Content-Type: application/json',
-      '-H', 'Authorization: Bearer ' .. M.api_key(),
+      '-H', 'Authorization: Bearer ' .. key,
       '-d', '@-',
       model.host .. '/v1/chat/completions',
     }
@@ -161,11 +158,11 @@ Rules:
       -- applies to requests that omit the field.
       temperature = 0.2,
       max_tokens = 4096,
-      -- DeepSeek-V4.1 emits reasoning by default; it burns the token budget
-      -- and is useless for buffer insertion. Verified live on monty:8010:
-      -- `thinking=false` suppresses it (0 reasoning tokens); the llama.cpp
-      -- spelling `enable_thinking=false` does NOT on this vLLM endpoint.
-      chat_template_kwargs = { thinking = false },
+      -- Qwen3.8 emits reasoning by default; it burns the token budget and is
+      -- useless for buffer insertion. Verified live on monty:8084:
+      -- `enable_thinking=false` suppresses it (0 reasoning tokens); the vLLM
+      -- spelling `thinking=false` is IGNORED by llama.cpp and leaks reasoning.
+      chat_template_kwargs = require('icarus_endpoint').no_thinking,
       messages = {
         { role = 'system', content = system_prompt },
         { role = 'user', content = user_prompt },

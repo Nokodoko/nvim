@@ -118,3 +118,8 @@ vim.b.minisurround_config = {
     },
   },
 }
+
+-- Markup tag editing (see lua/xml_surround.lua). Must come AFTER the
+-- `vim.b.minisurround_config` assignment above: `setup_buffer()` reads that
+-- table back, adds its `t` surrounding and reassigns, so `L` survives.
+require('xml_surround').setup_buffer()

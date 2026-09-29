@@ -171,6 +171,21 @@ now(function()
     return enabled and '' or '[fmt off]'
   end
 
+  -- Custom section showing the estimated prompt-token count of the buffer
+  -- (see lua/chunked.lua). Returns '' for filetypes Chunk doesn't measure,
+  -- so the section costs a table lookup on other filetypes. The count is
+  -- cached on b:changedtick inside token_count(), which matters because the
+  -- statusline redraws on every cursor move while a full scan costs ~1ms on
+  -- an 8k-line buffer.
+  local token_status = function()
+    local ok, chunked = pcall(require, 'chunked')
+    if not ok then return '' end
+    local tokens = chunked.token_count()
+    if not tokens then return '' end
+    if tokens >= 1000 then return string.format('~%.1fk tok', tokens / 1000) end
+    return string.format('~%d tok', tokens)
+  end
+
   require('mini.statusline').setup({
     content = {
       active = function()
@@ -184,6 +199,7 @@ now(function()
         local location = MiniStatusline.section_location({ trunc_width = 75 })
         local search = MiniStatusline.section_searchcount({ trunc_width = 75 })
         local fmt = format_status()
+        local tokens = token_status()
 
         return MiniStatusline.combine_groups({
           { hl = mode_hl, strings = { mode } },
@@ -191,7 +207,7 @@ now(function()
           '%<', -- Truncation point
           { hl = 'MiniStatuslineFilename', strings = { filename } },
           '%=', -- End left alignment
-          { hl = 'MiniStatuslineFileinfo', strings = { fmt, fileinfo } },
+          { hl = 'MiniStatuslineFileinfo', strings = { fmt, tokens, fileinfo } },
           { hl = mode_hl, strings = { search, location } },
         })
       end,
@@ -837,11 +853,27 @@ later(function() require('mini.pick').setup() end)
 later(function()
   -- Define language patterns to work better with 'friendly-snippets'
   local latex_patterns = { 'latex/**/*.json', '**/latex.json' }
+  -- Sparse-attention prompting uses BOTH markdown headings (`#`/`##`) and XML
+  -- tag headings (`<summary>`/`</summary>`), and `.md`, `.xml` and `.xmd` all
+  -- mix the two. mini.snippets resolves snippet files by the tree-sitter
+  -- language at the cursor (see `MiniSnippets.default_prepare`), so a markdown
+  -- buffer would otherwise never see the XML tag snippets in `xml.json` and an
+  -- xml buffer would never see the markdown heading snippets in `markdown.json`.
+  -- Aliasing each markup language to load BOTH files makes every one of
+  -- `.md`/`.xml`/`.xmd` offer markdown headings AND xml tags. An alias
+  -- REPLACES a language's default patterns, so each entry lists every file it
+  -- needs (markdown keeps its `.lua` dynamic loader too). `promptmd` is listed
+  -- defensively: a promptmd buffer usually resolves to `markdown` at the
+  -- cursor, but a node owned by the promptmd root tree resolves to `promptmd`.
+  local markup_snippets = { '**/markdown.json', '**/markdown.lua', '**/xml.json' }
   local lang_patterns = {
     tex = latex_patterns,
     plaintex = latex_patterns,
     -- Recognize special injected language of markdown tree-sitter parser
     markdown_inline = { 'markdown.json' },
+    markdown = markup_snippets,
+    xml = markup_snippets,
+    promptmd = markup_snippets,
   }
 
   local snippets = require('mini.snippets')
@@ -853,7 +885,10 @@ later(function()
       -- Load from 'snippets/' directory of plugins, like 'friendly-snippets'
       snippets.gen_loader.from_lang({ lang_patterns = lang_patterns }),
       -- Load filetype-specific snippets from 'after/snippets/' directory
-      snippets.gen_loader.from_lang({ path = config_path .. '/after/snippets' }),
+      -- (resolved via runtimepath; the markup aliases above are passed here too
+      -- so an xml buffer also picks up after/snippets/markdown.json and a
+      -- markdown buffer also picks up after/snippets/xml.json)
+      snippets.gen_loader.from_lang({ path = config_path .. '/after/snippets', lang_patterns = lang_patterns }),
     },
     -- Disable default <C-j> expand mapping (use Tab or custom mapping instead)
     mappings = { expand = '', jump_next = '', jump_prev = '' },
