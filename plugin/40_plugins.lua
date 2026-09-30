@@ -241,7 +241,6 @@ local pluglist = {
   "tpope/vim-dadbod",
   "tpope/vim-surround",
   "vimwiki/vimwiki",
-  "folke/noice.nvim.git",
   -- "hrsh7th/nvim-cmp",
 }
 
@@ -756,44 +755,15 @@ later(function()
   end, { desc = 'Open the Icarus chat (local GLM inference)' })
 end)
 
--- Kill-switch for bisecting UI problems: `nvim --cmd "let g:no_noice = 1"`.
--- noice replaces the message/cmdline UI via vim.ui_attach(ext_messages) and
--- hides the cursor with a blend=100 guicursor while its cmdline is open, so
--- when it breaks on a nightly the symptom is a blank, cursorless window.
-if vim.g.no_noice ~= 1 then later(function()
-  add('folke/noice.nvim.git')
-  require('noice').setup({
-    popupmenu = {
-      enabled = false,
-    },
-    lsp = {
-      hover = { enabled = false },
-      signature = { enabled = false },
-      progress = { enabled = false },
-      message = { enabled = false },
-      override = {
-        ["vim.lsp.util.convert_input_to_markdown_lines"] = false,
-        ["vim.lsp.util.stylize_markdown"] = false,
-        ["cmp.entry.get_documentation"] = false,
-      },
-    },
-    views = {
-      cmdline_input = {
-        relative = "cursor",
-        position = { row = 1, col = 0 },
-        size = { width = 60 },
-        border = { style = "single" },
-      },
-    },
-    routes = {
-      -- Show macro recording messages in cmdline
-      {
-        view = "cmdline",
-        filter = { event = "msg_showmode" },
-      },
-    },
-  })
-end) end
+-- (noice.nvim removed 2026-09-29)
+--
+-- It replaced the message/cmdline UI through vim.ui_attach(ext_messages) and
+-- hid the cursor behind a blend=100 guicursor while its cmdline was open. On
+-- the 0.13 nightly that combination left markdown windows blank and
+-- cursorless (nvim's own grid and zellij's were correct; only the repaint
+-- stopped) -- reproduced in kitty and wezterm, gone with noice disabled. The
+-- builtin cmdline/messages UI is used instead; nvim's in-tree `vim._extui`
+-- is the candidate if a floating cmdline is wanted back.
 
 require('mini.hues').setup({
   background = '#2f1c22',
