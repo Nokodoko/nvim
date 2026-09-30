@@ -93,15 +93,42 @@ local function extract_text(content)
   return nil
 end
 
--- Scan JSONL session files and collect messages matching a role
--- For 'assistant' role, also captures custom_message records (e.g. intent-gate output)
-local function collect_jsonl_entries(files, role, limit)
+-- How many history entries a picker holds. The pickers exist to find a
+-- RECENT return, so this bounds the newest N across all sessions; it is not
+-- a per-file cap (see collect_newest).
+M.HISTORY_LIMIT = 300
+
+--- The newest `limit` entries across session files.
+---
+--- `files` are newest-session-first; each file's records are chronological.
+--- The old scans took the FIRST `limit` matches they met -- the OLDEST replies
+--- of the newest session -- and stopped, so in any long session the most
+--- recent returns (the ones a user reaches for) were exactly the ones missing
+--- from the picker. This takes each file's TAIL instead, walks back through
+--- sessions until `limit` is reached, and orders the result newest-first.
+---@param files string[] newest first
+---@param limit integer
+---@param read fun(path: string): table[] chronological entries of one file
+---@return table[]
+local function collect_newest(files, limit, read)
   local entries = {}
   for _, path in ipairs(files) do
     if #entries >= limit then break end
-    local lines = vim.fn.readfile(path)
-    for _, line in ipairs(lines) do
-      if #entries >= limit then break end
+    local found = read(path)
+    for i = #found, math.max(1, #found - (limit - #entries) + 1), -1 do
+      entries[#entries + 1] = found[i]
+    end
+  end
+  table.sort(entries, function(a, b) return (a.timestamp or 0) > (b.timestamp or 0) end)
+  return entries
+end
+
+-- Scan JSONL session files and collect messages matching a role
+-- For 'assistant' role, also captures custom_message records (e.g. intent-gate output)
+local function collect_jsonl_entries(files, role, limit)
+  return collect_newest(files, limit, function(path)
+    local entries = {}
+    for _, line in ipairs(vim.fn.readfile(path)) do
       local ok, record = pcall(vim.fn.json_decode, line)
       if not ok or not record then goto continue end
 
@@ -122,13 +149,14 @@ local function collect_jsonl_entries(files, role, limit)
           timestamp = parse_iso_timestamp(record.timestamp),
           preview = text:sub(1, 80):gsub('\n', ' '),
           text = text,
+          session = vim.fn.fnamemodify(path, ':t:r'):sub(-8),
         }
       end
 
       ::continue::
     end
-  end
-  return entries
+    return entries
+  end)
 end
 
 -- Get sorted Pi session files (newest first, ordered by mtime)
@@ -239,8 +267,11 @@ end
 -- Icarus sessions: ~/.icarus/sessions/<project>/<id>.jsonl, flat records of
 -- type user_message / assistant_message with `text` and `ts`. The per-project
 -- `usage/` subfolder holds token accounting, not conversation, and is skipped.
+-- Overridable so tests can point at a synthetic sessions tree.
+M.icarus_sessions_dir = '~/.icarus/sessions'
+
 local function get_icarus_session_files()
-  local sessions_dir = vim.fn.expand('~/.icarus/sessions')
+  local sessions_dir = vim.fn.expand(M.icarus_sessions_dir)
   if vim.fn.isdirectory(sessions_dir) ~= 1 then
     vim.notify('Icarus sessions directory not found: ' .. sessions_dir, vim.log.levels.WARN)
     return nil
@@ -263,26 +294,31 @@ local function get_icarus_session_files()
   return files
 end
 
--- Collect icarus records of one type ('user_message' | 'assistant_message')
+-- Collect icarus records of one type ('user_message' | 'assistant_message').
+-- Returns the newest `limit` entries across `files` (see collect_newest).
+-- Lines are pre-filtered by a plain substring match before json_decode:
+-- session files run to ~1 MB and the decode dominated the old scan.
 local function collect_icarus_entries(files, record_type, limit)
-  local entries = {}
-  for _, path in ipairs(files) do
-    if #entries >= limit then break end
+  local needle = '"type":"' .. record_type .. '"'
+  return collect_newest(files, limit, function(path)
+    local found = {}
     for _, line in ipairs(vim.fn.readfile(path)) do
-      if #entries >= limit then break end
-      local ok, record = pcall(vim.fn.json_decode, line)
-      if ok and record and record.type == record_type
-        and type(record.text) == 'string' and record.text ~= '' then
-        local text = strip_ansi(record.text)
-        entries[#entries + 1] = {
-          timestamp = parse_iso_timestamp(record.ts),
-          preview = text:sub(1, 80):gsub('\n', ' '),
-          text = text,
-        }
+      if line:find(needle, 1, true) then
+        local ok, record = pcall(vim.fn.json_decode, line)
+        if ok and record and record.type == record_type
+          and type(record.text) == 'string' and record.text ~= '' then
+          local text = strip_ansi(record.text)
+          found[#found + 1] = {
+            timestamp = parse_iso_timestamp(record.ts),
+            preview = text:sub(1, 80):gsub('\n', ' '),
+            text = text,
+            session = vim.fn.fnamemodify(path, ':t:r'):sub(-8),
+          }
+        end
       end
     end
-  end
-  return entries
+    return found
+  end)
 end
 
 -- Insert last Icarus response: final assistant_message of the newest session
@@ -321,6 +357,89 @@ function M.insert_last_response()
   end)
 end
 
+local preview_ns = vim.api.nvim_create_namespace('claude_prompt_preview')
+
+--- Score how well `line` matches `prompt` (both lower-cased): an exact
+--- substring wins outright; otherwise the fuzzy score is the count of prompt
+--- characters found in order (the same notion telescope's sorter uses).
+local function line_score(line, prompt)
+  if line:find(prompt, 1, true) then return math.huge end
+  local pos, n = 1, 0
+  for i = 1, #prompt do
+    local c = prompt:sub(i, i)
+    if c ~= ' ' then
+      local at = line:find(c, pos, true)
+      if not at then break end
+      n, pos = n + 1, at + 1
+    end
+  end
+  return n
+end
+
+--- 1-based row of the line in `lines` that best matches `prompt`, or nil
+--- when the prompt is empty or nothing matches at all.
+function M.find_best_line(lines, prompt)
+  prompt = vim.trim((prompt or ''):lower())
+  if prompt == '' then return nil end
+  local best_row, best = nil, 0
+  for i, line in ipairs(lines) do
+    local s = line_score(line:lower(), prompt)
+    if s > best then best_row, best = i, s end
+    if s == math.huge then break end
+  end
+  return best_row
+end
+local find_best_line = M.find_best_line
+
+--- Highlight every occurrence of each whitespace-separated prompt token.
+local function highlight_query(bufnr, lines, prompt)
+  vim.api.nvim_buf_clear_namespace(bufnr, preview_ns, 0, -1)
+  for token in (prompt or ''):lower():gmatch('%S+') do
+    for i, line in ipairs(lines) do
+      local lower, from = line:lower(), 1
+      while true do
+        local s, e = lower:find(token, from, true)
+        if not s then break end
+        vim.api.nvim_buf_set_extmark(bufnr, preview_ns, i - 1, s - 1, { end_col = e, hl_group = 'Search' })
+        from = e + 1
+      end
+    end
+  end
+end
+
+--- Score a history entry against the prompt for the picker. Lower is better;
+--- -1 filters the entry out (telescope's convention).
+---
+--- Telescope's default fuzzy sorter (algos/fzy.lua) refuses any candidate
+--- longer than MATCH_MAX_LENGTH = 1024 chars -- it returns SCORE_MIN, which
+--- the generic sorter treats as "no match" -- so with the whole return as the
+--- ordinal, every real reply vanished the moment a character was typed.
+--- This sorter has no length cap and matches DIRECT strings, which is how
+--- these pickers are used: the whole prompt as a phrase first (ranked by how
+--- early it occurs), else every whitespace-separated token as a substring
+--- anywhere (AND), ranked by the latest token's position. No fuzzy
+--- character-skipping: a phrase remembered from a reply is typed literally.
+function M.history_score(prompt, line)
+  local p = vim.trim((prompt or ''):lower())
+  if p == '' then return 1 end
+  local hay = (line or ''):lower()
+  local at = hay:find(p, 1, true)
+  if at then return 1 + at / (#hay + 1) end
+  local worst = 0
+  for tok in p:gmatch('%S+') do
+    local pos = hay:find(tok, 1, true)
+    if not pos then return -1 end
+    if pos > worst then worst = pos end
+  end
+  return 2 + worst / (#hay + 1)
+end
+
+local function history_sorter()
+  return require('telescope.sorters').Sorter:new({
+    scoring_function = function(_, prompt, line) return M.history_score(prompt, line) end,
+  })
+end
+
 -- Open telescope picker showing a list of agent responses
 local function open_history_picker(title, history)
   local pickers = require('telescope.pickers')
@@ -347,21 +466,43 @@ local function open_history_picker(title, history)
               age = string.format('%dh ago', math.floor(secs / 3600))
             end
           end
-          local display = string.format('[%s] %s', age, entry.preview or '(empty)')
+          local display = string.format('[%s%s] %s', age,
+            entry.session and (' ' .. entry.session) or '', entry.preview or '(empty)')
           return {
             value = entry,
             display = display,
-            ordinal = entry.preview or '',
+            -- Match against the WHOLE return, not the 80-char preview: a
+            -- phrase remembered from the middle of a reply must find it.
+            -- Whitespace collapsed so a query can span a line break. Only
+            -- valid with history_sorter() above: telescope's default sorter
+            -- drops anything longer than 1024 chars.
+            ordinal = (entry.text or ''):gsub('%s+', ' '),
           }
         end,
       }),
-      sorter = conf.generic_sorter({}),
+      sorter = history_sorter(),
       previewer = previewers.new_buffer_previewer({
         title = 'Response Preview',
         define_preview = function(self, entry)
           local lines = vim.split(entry.value.text or '', '\n', { plain = true })
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
           vim.bo[self.state.bufnr].filetype = 'markdown'
+          -- Open the preview AT the match, not at the top: the ordinal is the
+          -- whole return, so the line that satisfied the query is often far
+          -- below the fold and the entry looks like a miss. Pick the line that
+          -- best matches the prompt (exact substring first, then the most
+          -- query characters in order), scroll it to the top of the preview,
+          -- and highlight the query tokens on every line.
+          local prompt = action_state.get_current_line()
+          local row = find_best_line(lines, prompt)
+          if row then
+            vim.schedule(function()
+              if not (vim.api.nvim_win_is_valid(self.state.winid) and vim.api.nvim_buf_is_valid(self.state.bufnr)) then return end
+              vim.api.nvim_win_set_cursor(self.state.winid, { row, 0 })
+              vim.api.nvim_win_call(self.state.winid, function() vim.cmd('normal! zt') end)
+              highlight_query(self.state.bufnr, lines, prompt)
+            end)
+          end
         end,
       }),
       attach_mappings = function(prompt_bufnr)
@@ -401,7 +542,7 @@ end
 local function load_pi_history()
   local files = get_pi_session_files()
   if not files then return end
-  local entries = collect_jsonl_entries(files, 'assistant', 50)
+  local entries = collect_jsonl_entries(files, 'assistant', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Pi assistant responses found.', vim.log.levels.WARN)
     return
@@ -413,7 +554,7 @@ end
 local function load_pi_prompts()
   local files = get_pi_session_files()
   if not files then return end
-  local entries = collect_jsonl_entries(files, 'user', 50)
+  local entries = collect_jsonl_entries(files, 'user', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Pi user prompts found.', vim.log.levels.WARN)
     return
@@ -468,7 +609,7 @@ end
 local function load_icarus_history()
   local files = get_icarus_session_files()
   if not files then return end
-  local entries = collect_icarus_entries(files, 'assistant_message', 50)
+  local entries = collect_icarus_entries(files, 'assistant_message', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Icarus assistant responses found.', vim.log.levels.WARN)
     return
@@ -480,13 +621,18 @@ end
 local function load_icarus_prompts()
   local files = get_icarus_session_files()
   if not files then return end
-  local entries = collect_icarus_entries(files, 'user_message', 50)
+  local entries = collect_icarus_entries(files, 'user_message', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Icarus user prompts found.', vim.log.levels.WARN)
     return
   end
   open_history_picker('Icarus Prompts', entries)
 end
+
+-- Exposed for tests (tests/test_history_picker.lua).
+M._collect_icarus_entries = collect_icarus_entries
+M._get_icarus_session_files = get_icarus_session_files
+M._load_icarus_history = load_icarus_history
 
 -- Select an agent response to insert: first pick agent, then browse history
 function M.select_response()
