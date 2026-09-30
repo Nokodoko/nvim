@@ -120,7 +120,65 @@ end
 local timer = vim.uv.new_timer()
 timer:start(2000, 2000, vim.schedule_wrap(function() snapshot('tick') end))
 
+-- Stall detector. The symptom "typed text shows up all at once, later" is the
+-- main loop being blocked: input queues, nothing repaints, the cursor is
+-- hidden while busy. A 20 ms uv timer cannot fire while the loop is blocked,
+-- so a late tick measures the stall; the last keys typed before it (from
+-- vim.on_key) say what the user was doing.
+local keys = {}
+vim.on_key(function(_, typed)
+  if typed == nil or typed == '' then return end
+  keys[#keys + 1] = vim.fn.keytrans(typed)
+  if #keys > 24 then table.remove(keys, 1) end
+end)
+local last_tick = vim.uv.hrtime()
+local stall_timer = vim.uv.new_timer()
+stall_timer:start(20, 20, function()
+  local now = vim.uv.hrtime()
+  local gap = (now - last_tick) / 1e6
+  last_tick = now
+  if gap > 150 then
+    local k = table.concat(keys, '')
+    vim.schedule(function()
+      log('STALL', string.format('%.0f ms  mode=%s pum=%d keys=%q', gap, vim.fn.mode(true), vim.fn.pumvisible(), k))
+    end)
+  end
+end)
+
+-- Name the blocker: wrap the synchronous calls a plugin could stall the loop
+-- with, logging duration + caller when one takes longer than 100 ms.
+local function wrap(tbl, name, label)
+  local orig = tbl[name]
+  if type(orig) ~= 'function' then return end
+  tbl[name] = function(...)
+    local t = vim.uv.hrtime()
+    local res = vim.F.pack_len(orig(...))
+    local ms = (vim.uv.hrtime() - t) / 1e6
+    if ms > 100 then
+      log('SLOW', string.format('%s %.0f ms  %s', label, ms, debug.traceback('', 2):gsub('\n%s*', ' <- '):sub(1, 500)))
+    end
+    return vim.F.unpack_len(res)
+  end
+end
+wrap(vim.fn, 'system', 'vim.fn.system')
+wrap(vim.fn, 'systemlist', 'vim.fn.systemlist')
+wrap(vim.fn, 'spellsuggest', 'vim.fn.spellsuggest')
+wrap(vim.fn, 'glob', 'vim.fn.glob')
+wrap(vim.fn, 'globpath', 'vim.fn.globpath')
+wrap(vim.fn, 'jobwait', 'vim.fn.jobwait')
+wrap(vim, 'wait', 'vim.wait')
+wrap(vim.lsp, 'buf_request_sync', 'vim.lsp.buf_request_sync')
+wrap(vim.lsp.buf, 'completion', 'vim.lsp.buf.completion')
+wrap(vim.treesitter, 'get_parser', 'vim.treesitter.get_parser')
+wrap(io, 'popen', 'io.popen')
+wrap(os, 'execute', 'os.execute')
+
+on({ 'CompleteChanged', 'CompleteDonePre' }, function(ev)
+  log(ev.event, string.format('pum=%d', vim.fn.pumvisible()))
+end)
+
 vim.api.nvim_create_autocmd('VimLeavePre', { group = group, callback = function()
   timer:stop()
+  stall_timer:stop()
   log('exit', 'VimLeavePre')
 end })
