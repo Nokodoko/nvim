@@ -407,6 +407,39 @@ local function highlight_query(bufnr, lines, prompt)
   end
 end
 
+--- Score a history entry against the prompt for the picker. Lower is better;
+--- -1 filters the entry out (telescope's convention).
+---
+--- Telescope's default fuzzy sorter (algos/fzy.lua) refuses any candidate
+--- longer than MATCH_MAX_LENGTH = 1024 chars -- it returns SCORE_MIN, which
+--- the generic sorter treats as "no match" -- so with the whole return as the
+--- ordinal, every real reply vanished the moment a character was typed.
+--- This sorter has no length cap and matches DIRECT strings, which is how
+--- these pickers are used: the whole prompt as a phrase first (ranked by how
+--- early it occurs), else every whitespace-separated token as a substring
+--- anywhere (AND), ranked by the latest token's position. No fuzzy
+--- character-skipping: a phrase remembered from a reply is typed literally.
+function M.history_score(prompt, line)
+  local p = vim.trim((prompt or ''):lower())
+  if p == '' then return 1 end
+  local hay = (line or ''):lower()
+  local at = hay:find(p, 1, true)
+  if at then return 1 + at / (#hay + 1) end
+  local worst = 0
+  for tok in p:gmatch('%S+') do
+    local pos = hay:find(tok, 1, true)
+    if not pos then return -1 end
+    if pos > worst then worst = pos end
+  end
+  return 2 + worst / (#hay + 1)
+end
+
+local function history_sorter()
+  return require('telescope.sorters').Sorter:new({
+    scoring_function = function(_, prompt, line) return M.history_score(prompt, line) end,
+  })
+end
+
 -- Open telescope picker showing a list of agent responses
 local function open_history_picker(title, history)
   local pickers = require('telescope.pickers')
@@ -438,15 +471,16 @@ local function open_history_picker(title, history)
           return {
             value = entry,
             display = display,
-            -- Fuzzy-match against the WHOLE return, not the 80-char preview:
-            -- a phrase remembered from the middle of a reply must find it.
-            -- Newlines collapsed so a query can span a line break; capped so
-            -- the sorter stays responsive on very long returns.
-            ordinal = (entry.text or ''):sub(1, 20000):gsub('%s+', ' '),
+            -- Match against the WHOLE return, not the 80-char preview: a
+            -- phrase remembered from the middle of a reply must find it.
+            -- Whitespace collapsed so a query can span a line break. Only
+            -- valid with history_sorter() above: telescope's default sorter
+            -- drops anything longer than 1024 chars.
+            ordinal = (entry.text or ''):gsub('%s+', ' '),
           }
         end,
       }),
-      sorter = conf.generic_sorter({}),
+      sorter = history_sorter(),
       previewer = previewers.new_buffer_previewer({
         title = 'Response Preview',
         define_preview = function(self, entry)
@@ -598,6 +632,7 @@ end
 -- Exposed for tests (tests/test_history_picker.lua).
 M._collect_icarus_entries = collect_icarus_entries
 M._get_icarus_session_files = get_icarus_session_files
+M._load_icarus_history = load_icarus_history
 
 -- Select an agent response to insert: first pick agent, then browse history
 function M.select_response()
