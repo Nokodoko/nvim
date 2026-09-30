@@ -15,10 +15,10 @@
 --      over three lines, and drops you inside the `<>` so the tag name is typed
 --      once; on InsertLeave the name is mirrored into the closing tag and a
 --      markdown h1 copy of the opening tag (`yyp`, `sad` on the angle
---      brackets, `# ` in front) is inserted right below it:
+--      brackets, `# ` in front, upper-cased) is inserted right below it:
 --
 --          <rules>
---          # rules
+--          # RULES
 --              selection
 --          </rules>
 --
@@ -229,8 +229,8 @@ end
 --- insert the h1 copy of the opening tag below it, then tear the session down.
 --- Only the first whitespace-delimited token is mirrored, so `<div class="x">`
 --- closes as `</div>` -- consistent with Mechanism A, which also closes with
---- the bare name. The h1 line keeps EVERYTHING typed (`# div class="x"`),
---- exactly what `yyp` + `sad` on the brackets would leave.
+--- the bare name. The h1 line keeps EVERYTHING typed, upper-cased
+--- (`# DIV CLASS="X"`): `yyp` + `sad` on the brackets + `gUU`.
 local function arm_mirror(buf, open_id, close_id)
   vim.api.nvim_create_autocmd('InsertLeave', {
     buffer = buf,
@@ -254,7 +254,7 @@ local function arm_mirror(buf, open_id, close_id)
         -- would shift the row just read from `close`.
         local open_line = vim.api.nvim_buf_get_lines(buf, open[1], open[1] + 1, false)[1] or ''
         local indent = open_line:match('^%s*')
-        vim.api.nvim_buf_set_lines(buf, open[1] + 1, open[1] + 1, false, { indent .. '# ' .. typed })
+        vim.api.nvim_buf_set_lines(buf, open[1] + 1, open[1] + 1, false, { indent .. '# ' .. typed:upper() })
       end)
       pcall(vim.api.nvim_buf_clear_namespace, buf, ns, 0, -1)
       pcall(function() vim.b[buf].xml_surround_pending = nil end)

@@ -49,12 +49,12 @@ local function run_sat(buf, row, col, select_keys, typed)
   return vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 end
 
-check('linewise V selection: tag pair, h1 copy, indented body', function()
+check('linewise V selection: tag pair, upper-cased h1 copy, indented body', function()
   local buf = markdown_buf({ 'intro', '    some selected text', 'outro' })
   eq(run_sat(buf, 2, 0, 'V', 'rules id="1"'), {
     'intro',
     '    <rules id="1">',
-    '    # rules id="1"',
+    '    # RULES ID="1"',
     '        some selected text',
     '    </rules>',
     'outro',
@@ -65,7 +65,7 @@ check('charwise v selection of a whole line', function()
   local buf = markdown_buf({ 'some selected text' })
   eq(run_sat(buf, 1, 0, 'v$h', 'note'), {
     '<note>',
-    '# note',
+    '# NOTE',
     '    some selected text',
     '</note>',
   })
