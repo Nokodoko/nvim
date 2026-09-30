@@ -13,7 +13,14 @@
 --
 --   B. Visual `sat` wraps the selection in an EMPTY `<>` / `</>` pair, splits it
 --      over three lines, and drops you inside the `<>` so the tag name is typed
---      once; on InsertLeave the name is mirrored into the closing tag.
+--      once; on InsertLeave the name is mirrored into the closing tag and a
+--      markdown h1 copy of the opening tag (`yyp`, `sad` on the angle
+--      brackets, `# ` in front) is inserted right below it:
+--
+--          <rules>
+--          # rules
+--              selection
+--          </rules>
 --
 -- This config has no markup formatter and no markup LSP, so indentation is
 -- computed here (current line's indent + one 'shiftwidth') rather than delegated.
@@ -209,9 +216,11 @@ local function locate(buf, candidate)
 end
 
 --- Mirror the tag NAME typed into the opening slot across to the closing slot,
---- then tear the session down. Only the first whitespace-delimited token is
---- mirrored, so `<div class="x">` closes as `</div>` -- consistent with
---- Mechanism A, which also closes with the bare name.
+--- insert the h1 copy of the opening tag below it, then tear the session down.
+--- Only the first whitespace-delimited token is mirrored, so `<div class="x">`
+--- closes as `</div>` -- consistent with Mechanism A, which also closes with
+--- the bare name. The h1 line keeps EVERYTHING typed (`# div class="x"`),
+--- exactly what `yyp` + `sad` on the brackets would leave.
 local function arm_mirror(buf, open_id, close_id)
   vim.api.nvim_create_autocmd('InsertLeave', {
     buffer = buf,
@@ -231,6 +240,11 @@ local function arm_mirror(buf, open_id, close_id)
         -- Nothing typed (plain `<Esc>`) leaves `<>` / `</>` alone, no error.
         if name == '' or close[1] == nil then return end
         vim.api.nvim_buf_set_text(buf, close[1], close[2], close[1], close[2], { name })
+        -- Header copy AFTER the mirror: inserting a line above the closing tag
+        -- would shift the row just read from `close`.
+        local open_line = vim.api.nvim_buf_get_lines(buf, open[1], open[1] + 1, false)[1] or ''
+        local indent = open_line:match('^%s*')
+        vim.api.nvim_buf_set_lines(buf, open[1] + 1, open[1] + 1, false, { indent .. '# ' .. typed })
       end)
       pcall(vim.api.nvim_buf_clear_namespace, buf, ns, 0, -1)
       pcall(function() vim.b[buf].xml_surround_pending = nil end)
