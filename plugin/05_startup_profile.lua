@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['05_startup_profile']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '05_startup_profile') then return end
 local uv = vim.uv or vim.loop
 if not uv or not vim.g.__startup_hrtime then
   return

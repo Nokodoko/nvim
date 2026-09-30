@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['zellij_run']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, 'zellij_run') then return end
 -- Zellij floating pane runner plugin
 -- Setup commands and keymaps for zellij_run module
 

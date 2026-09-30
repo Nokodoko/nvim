@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['terraform_run']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, 'terraform_run') then return end
 -- Terraform plan/apply commands
 -- Run terraform targeting the resource at cursor in a zellij floating pane
 

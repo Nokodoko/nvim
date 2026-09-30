@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['40_plugins']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '40_plugins') then return end
 -- ┌─────────────────────────┐
 -- │ Plugins outside of MINI │
 -- └─────────────────────────┘

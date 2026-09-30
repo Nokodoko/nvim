@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['70_cheatsheet']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '70_cheatsheet') then return end
 -- ┌──────────────────────────────────────────────────────────────────────────┐
 -- │ Keybind cheat sheet                                                      │
 -- └──────────────────────────────────────────────────────────────────────────┘

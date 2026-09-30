@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['15_filetypes']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '15_filetypes') then return end
 -- Filetype detection for template files (Jinja2, Ansible, Helm)
 
 -- promptmd: markdown that uses XML-style tag LINES ("<rules>", "</rules>")
