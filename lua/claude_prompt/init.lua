@@ -93,15 +93,42 @@ local function extract_text(content)
   return nil
 end
 
--- Scan JSONL session files and collect messages matching a role
--- For 'assistant' role, also captures custom_message records (e.g. intent-gate output)
-local function collect_jsonl_entries(files, role, limit)
+-- How many history entries a picker holds. The pickers exist to find a
+-- RECENT return, so this bounds the newest N across all sessions; it is not
+-- a per-file cap (see collect_newest).
+M.HISTORY_LIMIT = 300
+
+--- The newest `limit` entries across session files.
+---
+--- `files` are newest-session-first; each file's records are chronological.
+--- The old scans took the FIRST `limit` matches they met -- the OLDEST replies
+--- of the newest session -- and stopped, so in any long session the most
+--- recent returns (the ones a user reaches for) were exactly the ones missing
+--- from the picker. This takes each file's TAIL instead, walks back through
+--- sessions until `limit` is reached, and orders the result newest-first.
+---@param files string[] newest first
+---@param limit integer
+---@param read fun(path: string): table[] chronological entries of one file
+---@return table[]
+local function collect_newest(files, limit, read)
   local entries = {}
   for _, path in ipairs(files) do
     if #entries >= limit then break end
-    local lines = vim.fn.readfile(path)
-    for _, line in ipairs(lines) do
-      if #entries >= limit then break end
+    local found = read(path)
+    for i = #found, math.max(1, #found - (limit - #entries) + 1), -1 do
+      entries[#entries + 1] = found[i]
+    end
+  end
+  table.sort(entries, function(a, b) return (a.timestamp or 0) > (b.timestamp or 0) end)
+  return entries
+end
+
+-- Scan JSONL session files and collect messages matching a role
+-- For 'assistant' role, also captures custom_message records (e.g. intent-gate output)
+local function collect_jsonl_entries(files, role, limit)
+  return collect_newest(files, limit, function(path)
+    local entries = {}
+    for _, line in ipairs(vim.fn.readfile(path)) do
       local ok, record = pcall(vim.fn.json_decode, line)
       if not ok or not record then goto continue end
 
@@ -122,13 +149,14 @@ local function collect_jsonl_entries(files, role, limit)
           timestamp = parse_iso_timestamp(record.timestamp),
           preview = text:sub(1, 80):gsub('\n', ' '),
           text = text,
+          session = vim.fn.fnamemodify(path, ':t:r'):sub(-8),
         }
       end
 
       ::continue::
     end
-  end
-  return entries
+    return entries
+  end)
 end
 
 -- Get sorted Pi session files (newest first, ordered by mtime)
@@ -239,8 +267,11 @@ end
 -- Icarus sessions: ~/.icarus/sessions/<project>/<id>.jsonl, flat records of
 -- type user_message / assistant_message with `text` and `ts`. The per-project
 -- `usage/` subfolder holds token accounting, not conversation, and is skipped.
+-- Overridable so tests can point at a synthetic sessions tree.
+M.icarus_sessions_dir = '~/.icarus/sessions'
+
 local function get_icarus_session_files()
-  local sessions_dir = vim.fn.expand('~/.icarus/sessions')
+  local sessions_dir = vim.fn.expand(M.icarus_sessions_dir)
   if vim.fn.isdirectory(sessions_dir) ~= 1 then
     vim.notify('Icarus sessions directory not found: ' .. sessions_dir, vim.log.levels.WARN)
     return nil
@@ -263,26 +294,31 @@ local function get_icarus_session_files()
   return files
 end
 
--- Collect icarus records of one type ('user_message' | 'assistant_message')
+-- Collect icarus records of one type ('user_message' | 'assistant_message').
+-- Returns the newest `limit` entries across `files` (see collect_newest).
+-- Lines are pre-filtered by a plain substring match before json_decode:
+-- session files run to ~1 MB and the decode dominated the old scan.
 local function collect_icarus_entries(files, record_type, limit)
-  local entries = {}
-  for _, path in ipairs(files) do
-    if #entries >= limit then break end
+  local needle = '"type":"' .. record_type .. '"'
+  return collect_newest(files, limit, function(path)
+    local found = {}
     for _, line in ipairs(vim.fn.readfile(path)) do
-      if #entries >= limit then break end
-      local ok, record = pcall(vim.fn.json_decode, line)
-      if ok and record and record.type == record_type
-        and type(record.text) == 'string' and record.text ~= '' then
-        local text = strip_ansi(record.text)
-        entries[#entries + 1] = {
-          timestamp = parse_iso_timestamp(record.ts),
-          preview = text:sub(1, 80):gsub('\n', ' '),
-          text = text,
-        }
+      if line:find(needle, 1, true) then
+        local ok, record = pcall(vim.fn.json_decode, line)
+        if ok and record and record.type == record_type
+          and type(record.text) == 'string' and record.text ~= '' then
+          local text = strip_ansi(record.text)
+          found[#found + 1] = {
+            timestamp = parse_iso_timestamp(record.ts),
+            preview = text:sub(1, 80):gsub('\n', ' '),
+            text = text,
+            session = vim.fn.fnamemodify(path, ':t:r'):sub(-8),
+          }
+        end
       end
     end
-  end
-  return entries
+    return found
+  end)
 end
 
 -- Insert last Icarus response: final assistant_message of the newest session
@@ -347,11 +383,16 @@ local function open_history_picker(title, history)
               age = string.format('%dh ago', math.floor(secs / 3600))
             end
           end
-          local display = string.format('[%s] %s', age, entry.preview or '(empty)')
+          local display = string.format('[%s%s] %s', age,
+            entry.session and (' ' .. entry.session) or '', entry.preview or '(empty)')
           return {
             value = entry,
             display = display,
-            ordinal = entry.preview or '',
+            -- Fuzzy-match against the WHOLE return, not the 80-char preview:
+            -- a phrase remembered from the middle of a reply must find it.
+            -- Newlines collapsed so a query can span a line break; capped so
+            -- the sorter stays responsive on very long returns.
+            ordinal = (entry.text or ''):sub(1, 20000):gsub('%s+', ' '),
           }
         end,
       }),
@@ -401,7 +442,7 @@ end
 local function load_pi_history()
   local files = get_pi_session_files()
   if not files then return end
-  local entries = collect_jsonl_entries(files, 'assistant', 50)
+  local entries = collect_jsonl_entries(files, 'assistant', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Pi assistant responses found.', vim.log.levels.WARN)
     return
@@ -413,7 +454,7 @@ end
 local function load_pi_prompts()
   local files = get_pi_session_files()
   if not files then return end
-  local entries = collect_jsonl_entries(files, 'user', 50)
+  local entries = collect_jsonl_entries(files, 'user', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Pi user prompts found.', vim.log.levels.WARN)
     return
@@ -468,7 +509,7 @@ end
 local function load_icarus_history()
   local files = get_icarus_session_files()
   if not files then return end
-  local entries = collect_icarus_entries(files, 'assistant_message', 50)
+  local entries = collect_icarus_entries(files, 'assistant_message', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Icarus assistant responses found.', vim.log.levels.WARN)
     return
@@ -480,13 +521,17 @@ end
 local function load_icarus_prompts()
   local files = get_icarus_session_files()
   if not files then return end
-  local entries = collect_icarus_entries(files, 'user_message', 50)
+  local entries = collect_icarus_entries(files, 'user_message', M.HISTORY_LIMIT)
   if #entries == 0 then
     vim.notify('No Icarus user prompts found.', vim.log.levels.WARN)
     return
   end
   open_history_picker('Icarus Prompts', entries)
 end
+
+-- Exposed for tests (tests/test_history_picker.lua).
+M._collect_icarus_entries = collect_icarus_entries
+M._get_icarus_session_files = get_icarus_session_files
 
 -- Select an agent response to insert: first pick agent, then browse history
 function M.select_response()
