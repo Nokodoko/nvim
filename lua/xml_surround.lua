@@ -206,11 +206,21 @@ local function text_at(buf, row0, col0, len)
 end
 
 --- Resolve a candidate to the region mini actually surrounded, or nil.
+---
+--- The anchors sit exactly where mini inserts for a charwise selection. For a
+--- LINEWISE one (`V` + `sat`) mini skips the line's leading whitespace, so the
+--- left marker lands to the right of the `'<` anchor: accept it if only
+--- whitespace separates the two.
 local function locate(buf, candidate)
   local lrow, lcol = extmark_pos(buf, candidate.left)
   local rrow, rcol = extmark_pos(buf, candidate.right)
   if lrow == nil or rrow == nil then return nil end
-  if text_at(buf, lrow, lcol, 2) ~= '<>' then return nil end
+  if text_at(buf, lrow, lcol, 2) ~= '<>' then
+    local line = vim.api.nvim_buf_get_lines(buf, lrow, lrow + 1, false)[1] or ''
+    local ws_end = select(2, line:find('^%s*', lcol + 1))
+    if line:sub(ws_end + 1, ws_end + 2) ~= '<>' then return nil end
+    lcol = ws_end
+  end
   if text_at(buf, rrow, rcol, 3) ~= '</>' then return nil end
   return { lrow = lrow, lcol = lcol, rrow = rrow, rcol = rcol }
 end
