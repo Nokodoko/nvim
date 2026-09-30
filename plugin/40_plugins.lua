@@ -357,7 +357,9 @@ end)
 -- See also:
 -- - `:h minuet` - Plugin documentation
 -- - `/nvim-model <model> <host>` - repoint this + ChatGPT.nvim at a new model
-later(function()
+--
+-- Kill-switch for bisecting UI problems: `nvim --cmd "let g:no_minuet = 1"`.
+if vim.g.no_minuet ~= 1 then later(function()
   add('milanglacier/minuet-ai.nvim')
 
   -- Filetypes where an inline suggestion is just noise. Everything else --
@@ -460,7 +462,7 @@ later(function()
   -- full-buffer context scan with a windowed read. See lua/icarus_minuet_fast.lua
   -- for the measurements and the fallback semantics.
   require('icarus_minuet_fast').apply()
-end)
+end) end
 
 -- ChatGPT.nvim (Icarus chat) ===============================================
 -- nvim-model:managed model=qwen3.8-flash-next host=monty:8084
