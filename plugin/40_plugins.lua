@@ -626,7 +626,11 @@ later(function()
   end, { desc = 'Open the Icarus chat (local GLM inference)' })
 end)
 
-later(function()
+-- Kill-switch for bisecting UI problems: `nvim --cmd "let g:no_noice = 1"`.
+-- noice replaces the message/cmdline UI via vim.ui_attach(ext_messages) and
+-- hides the cursor with a blend=100 guicursor while its cmdline is open, so
+-- when it breaks on a nightly the symptom is a blank, cursorless window.
+if vim.g.no_noice ~= 1 then later(function()
   add('folke/noice.nvim.git')
   require('noice').setup({
     popupmenu = {
@@ -659,7 +663,7 @@ later(function()
       },
     },
   })
-end)
+end) end
 
 require('mini.hues').setup({
   background = '#2f1c22',
