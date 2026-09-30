@@ -332,25 +332,8 @@ end
 nmap_leader('uf', toggle_autoformat_global,  'Toggle format (global)')
 nmap_leader('uF', toggle_autoformat_buffer,  'Toggle format (buffer)')
 
--- minuet completion toggles (requires minuet-ai.nvim to be loaded)
--- Replaced the old Copilot toggles: copilot.lua cannot target a local
--- endpoint, so inline completion now runs on minuet against monty
--- (qwen3.8-flash-next; see the minuet block in 40_plugins.lua).
-local toggle_minuet = function()
-  local ok, vt = pcall(require, 'minuet.virtualtext')
-  if not ok then
-    vim.notify('minuet not loaded', vim.log.levels.WARN)
-    return
-  end
-  if vt.action.is_visible() then
-    vt.action.dismiss()
-  end
-  -- Buffer-local (vim.b.minuet_virtual_text_auto_trigger); notifies state itself
-  vt.action.toggle_auto_trigger()
-end
-
-nmap_leader('uc', toggle_minuet,                                'Toggle minuet (buffer)')
-nmap_leader('uC', '<Cmd>Minuet change_model<CR>',               'Minuet: pick model')
+-- `<leader>uc` / `<leader>uC` (inline-completion toggle / model picker) were
+-- removed with minuet-ai.nvim on 2026-09-29 -- see the note in 40_plugins.lua.
 
 -- Toggle YAML/Jinja2 filetype
 local toggle_yaml_jinja = function()

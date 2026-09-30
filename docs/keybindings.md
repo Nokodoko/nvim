@@ -1,18 +1,5 @@
 # Keybindings
 
-## AI completion (minuet, manual trigger)
-
-| Keys | Action |
-|---|---|
-| `<M-.>` | Request suggestion / cycle next (insert mode) |
-| `<M-,>` | Request suggestion / cycle previous (insert mode) |
-| `<C-l>` | Accept suggestion (or completion popup item) |
-| `<M-j>` | Accept one line of suggestion |
-| `<M-w>` | Accept N lines (prompts for N) |
-| `<C-]>` | Dismiss suggestion |
-| `<leader>uc` | Toggle minuet auto-trigger (buffer) |
-| `<leader>uC` | Pick minuet model |
-
 ## Cheat sheet
 
 | Keys | Action |
