@@ -82,6 +82,15 @@ check('entries carry the whole text (what the picker fuzzy-matches on)', functio
   eq(entries[1].session, 'cur', 'session tag')
 end)
 
+check('preview jumps to the line that best matches the prompt', function()
+  local lines = { '# heading', 'prose about tags', '', '<decision_needed>', 'more text', 'decide something' }
+  eq(cp.find_best_line(lines, 'decision_needed'), 4, 'exact substring wins')
+  eq(cp.find_best_line(lines, 'DECISION'), 4, 'case-insensitive')
+  eq(cp.find_best_line(lines, 'dcsn'), 4, 'fuzzy: most prompt chars in order')
+  eq(cp.find_best_line(lines, ''), nil, 'empty prompt: stay at top')
+  eq(cp.find_best_line(lines, 'zzzz'), nil, 'no char matches at all: stay at top')
+end)
+
 vim.fn.delete(root, 'rf')
 print(string.format('\n%d passed, %d failed', passed, failed))
 if failed > 0 then vim.cmd('cq 1') end

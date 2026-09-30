@@ -357,6 +357,56 @@ function M.insert_last_response()
   end)
 end
 
+local preview_ns = vim.api.nvim_create_namespace('claude_prompt_preview')
+
+--- Score how well `line` matches `prompt` (both lower-cased): an exact
+--- substring wins outright; otherwise the fuzzy score is the count of prompt
+--- characters found in order (the same notion telescope's sorter uses).
+local function line_score(line, prompt)
+  if line:find(prompt, 1, true) then return math.huge end
+  local pos, n = 1, 0
+  for i = 1, #prompt do
+    local c = prompt:sub(i, i)
+    if c ~= ' ' then
+      local at = line:find(c, pos, true)
+      if not at then break end
+      n, pos = n + 1, at + 1
+    end
+  end
+  return n
+end
+
+--- 1-based row of the line in `lines` that best matches `prompt`, or nil
+--- when the prompt is empty or nothing matches at all.
+function M.find_best_line(lines, prompt)
+  prompt = vim.trim((prompt or ''):lower())
+  if prompt == '' then return nil end
+  local best_row, best = nil, 0
+  for i, line in ipairs(lines) do
+    local s = line_score(line:lower(), prompt)
+    if s > best then best_row, best = i, s end
+    if s == math.huge then break end
+  end
+  return best_row
+end
+local find_best_line = M.find_best_line
+
+--- Highlight every occurrence of each whitespace-separated prompt token.
+local function highlight_query(bufnr, lines, prompt)
+  vim.api.nvim_buf_clear_namespace(bufnr, preview_ns, 0, -1)
+  for token in (prompt or ''):lower():gmatch('%S+') do
+    for i, line in ipairs(lines) do
+      local lower, from = line:lower(), 1
+      while true do
+        local s, e = lower:find(token, from, true)
+        if not s then break end
+        vim.api.nvim_buf_set_extmark(bufnr, preview_ns, i - 1, s - 1, { end_col = e, hl_group = 'Search' })
+        from = e + 1
+      end
+    end
+  end
+end
+
 -- Open telescope picker showing a list of agent responses
 local function open_history_picker(title, history)
   local pickers = require('telescope.pickers')
@@ -403,6 +453,22 @@ local function open_history_picker(title, history)
           local lines = vim.split(entry.value.text or '', '\n', { plain = true })
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
           vim.bo[self.state.bufnr].filetype = 'markdown'
+          -- Open the preview AT the match, not at the top: the ordinal is the
+          -- whole return, so the line that satisfied the query is often far
+          -- below the fold and the entry looks like a miss. Pick the line that
+          -- best matches the prompt (exact substring first, then the most
+          -- query characters in order), scroll it to the top of the preview,
+          -- and highlight the query tokens on every line.
+          local prompt = action_state.get_current_line()
+          local row = find_best_line(lines, prompt)
+          if row then
+            vim.schedule(function()
+              if not (vim.api.nvim_win_is_valid(self.state.winid) and vim.api.nvim_buf_is_valid(self.state.bufnr)) then return end
+              vim.api.nvim_win_set_cursor(self.state.winid, { row, 0 })
+              vim.api.nvim_win_call(self.state.winid, function() vim.cmd('normal! zt') end)
+              highlight_query(self.state.bufnr, lines, prompt)
+            end)
+          end
         end,
       }),
       attach_mappings = function(prompt_bufnr)
