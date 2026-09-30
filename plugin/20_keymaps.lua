@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['20_keymaps']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '20_keymaps') then return end
 -- ┌─────────────────┐
 -- │ Custom mappings │
 -- └─────────────────┘

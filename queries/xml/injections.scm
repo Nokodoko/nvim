@@ -6,11 +6,18 @@
 ; buffers (where the same blend comes from the promptmd parser plus its
 ; markdown content injection).
 ;
+; CharData is injected as `promptmd`, NOT directly as markdown: xml content
+; is normally indented to its nesting depth, and markdown reads 4+ columns
+; of indentation as an indented code block. The promptmd parser sees no tags
+; here (xml already consumed them), so all it does is split the text into
+; `line` nodes that start after the positioning indentation;
+; queries/promptmd/injections.scm then injects markdown over those, exactly
+; as in a .md/.xmd buffer.
+;
 ; `injection.combined` merges every CharData node in the buffer into one
-; markdown parse, so multi-line markdown constructs (lists, fenced blocks)
-; work across tag lines, exactly as in queries/promptmd/injections.scm.
-; Comment, CData (CDATA sections) and PI nodes are NOT matched here and
-; keep their plain xml highlighting.
+; promptmd parse, so multi-line markdown constructs (lists, fenced blocks)
+; work across tag lines. Comment, CData (CDATA sections) and PI nodes are
+; NOT matched here and keep their plain xml highlighting.
 ((CharData) @injection.content
-  (#set! injection.language "markdown")
+  (#set! injection.language "promptmd")
   (#set! injection.combined))

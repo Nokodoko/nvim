@@ -9,16 +9,20 @@ return {
   -- (GET /provider on a running `icarus serve`; there is no working CLI
   -- equivalent -- see /tmp/claude-1000/-home-n0ko-test-spec/
   -- 50dbbba7-9c58-4bf1-ace5-ff862ab47886/scratchpad/icarus-meh-m-findings.md).
-  -- Re-fetched at expansion time so the list can't go stale. Fetch/decode is
-  -- shared with lua/icarus_model_picker.lua via lua/icarus_models.lua.
+  -- Served from lua/icarus_models.lua's background-refreshed cache, NEVER a
+  -- synchronous fetch: mini.snippets calls this function on every prepare
+  -- (every completion round while typing, not just on expand), and a blocking
+  -- curl here froze the editor for 1.6-2s per keystroke burst. The first call
+  -- after startup returns the fallback body and triggers the fetch; the list
+  -- is live from then on (refreshed when older than 30s).
   models = function(_)
     local icarus_models = require('icarus_models')
-    local data = icarus_models.fetch()
+    local data = icarus_models.cached(30)
     if data == nil then
       return {
         prefix = 'models',
-        description = 'icarus models (live, currently unreachable)',
-        body = string.format('(icarus serve not running at %s)', icarus_models.addr),
+        description = 'icarus models (fetching, or icarus serve unreachable)',
+        body = string.format('(icarus models not available yet from %s -- expand again)', icarus_models.addr),
       }
     end
 

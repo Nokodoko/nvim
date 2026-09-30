@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['chunked']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, 'chunked') then return end
 -- Chunk visualizer commands and keymaps
 --
 -- Wires lua/chunked.lua (the attention-aware chunk visualizer) into the

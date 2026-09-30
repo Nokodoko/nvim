@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['40_plugins']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '40_plugins') then return end
 -- ┌─────────────────────────┐
 -- │ Plugins outside of MINI │
 -- └─────────────────────────┘
@@ -358,7 +360,9 @@ end)
 -- See also:
 -- - `:h minuet` - Plugin documentation
 -- - `/nvim-model <model> <host>` - repoint this + ChatGPT.nvim at a new model
-later(function()
+--
+-- Kill-switch for bisecting UI problems: `nvim --cmd "let g:no_minuet = 1"`.
+if vim.g.no_minuet ~= 1 then later(function()
   add('milanglacier/minuet-ai.nvim')
 
   -- Filetypes where an inline suggestion is just noise. Everything else --
@@ -430,10 +434,14 @@ later(function()
     context_window = 8000,
 
     virtualtext = {
-      -- Manual trigger only: auto-trigger caused ~5s UI freezes while the
-      -- llama.cpp prompt eval blocked redraws. Invoke with <M-]> (next) or
-      -- <M-[> (prev) in insert mode; manual invocation works in ANY filetype.
-      auto_trigger_ft = {},
+      -- Auto-trigger everywhere but the ignore list. It was turned off on
+      -- the belief that requests froze the UI ~5s; the freeze was really the
+      -- synchronous curl in the markdown `models` function snippet, which
+      -- mini.completion (and so every minuet request) tripped on each
+      -- keystroke -- fixed in lua/icarus_models.lua (1599e07). The request
+      -- path itself is the vim.loop TCP client below, off the UI loop.
+      -- `nvim --cmd "let g:no_minuet = 1"` disables the plugin entirely.
+      auto_trigger_ft = { '*' },
       auto_trigger_ignore_ft = minuet_ignore_ft,
       -- mini.completion auto-triggers its popup constantly; at the default of
       -- false the grey virtual text would be suppressed nearly all the time.
@@ -449,11 +457,19 @@ later(function()
     },
   })
 
-  -- Manual-trigger mode: no buffer arming. `action.next`/`action.prev` fire a
-  -- request on demand even when auto-trigger is off, in any filetype. Do NOT
-  -- set vim.b.minuet_virtual_text_auto_trigger here -- arming buffers is what
-  -- re-enabled auto-trigger and brought back the ~5s UI freezes (the leftover
-  -- arming loop from the auto-trigger era was removed for exactly that reason).
+  -- minuet arms auto-trigger per buffer from a FileType autocmd registered in
+  -- setup() (virtualtext.lua M.setup). This block runs from `later()`, so the
+  -- buffers opened on the command line had their FileType fired long before
+  -- that autocmd existed and would stay unarmed until re-edited. Arm them now
+  -- with the same rule the autocmd applies (any filetype except the ignore
+  -- list). `action.next`/`action.prev` keep working manually regardless.
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    local ft = vim.bo[bufnr].filetype
+    if vim.api.nvim_buf_is_loaded(bufnr) and ft ~= '' and not vim.tbl_contains(minuet_ignore_ft, ft)
+        and vim.b[bufnr].minuet_virtual_text_auto_trigger == nil then
+      vim.b[bufnr].minuet_virtual_text_auto_trigger = true
+    end
+  end
 
   -- Fast path: replace minuet's per-request `curl` spawn (a synchronous
   -- fork+exec on the UI loop: ~1.5 ms warm, 15-65 ms cold -- the pause felt
@@ -461,7 +477,7 @@ later(function()
   -- full-buffer context scan with a windowed read. See lua/icarus_minuet_fast.lua
   -- for the measurements and the fallback semantics.
   require('icarus_minuet_fast').apply()
-end)
+end) end
 
 -- ChatGPT.nvim (Icarus chat) ===============================================
 -- nvim-model:managed model=qwen3.8-flash-next host=monty:8084
@@ -756,7 +772,11 @@ later(function()
   end, { desc = 'Open the Icarus chat (local GLM inference)' })
 end)
 
-later(function()
+-- Kill-switch for bisecting UI problems: `nvim --cmd "let g:no_noice = 1"`.
+-- noice replaces the message/cmdline UI via vim.ui_attach(ext_messages) and
+-- hides the cursor with a blend=100 guicursor while its cmdline is open, so
+-- when it breaks on a nightly the symptom is a blank, cursorless window.
+if vim.g.no_noice ~= 1 then later(function()
   add('folke/noice.nvim.git')
   require('noice').setup({
     popupmenu = {
@@ -789,7 +809,7 @@ later(function()
       },
     },
   })
-end)
+end) end
 
 require('mini.hues').setup({
   background = '#2f1c22',

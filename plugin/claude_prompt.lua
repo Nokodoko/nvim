@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['claude_prompt']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, 'claude_prompt') then return end
 -- Claude prompt plugin registration
 -- Sets up user commands and keymaps for Claude AI integration
 

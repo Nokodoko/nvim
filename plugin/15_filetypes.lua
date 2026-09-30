@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['15_filetypes']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '15_filetypes') then return end
 -- Filetype detection for template files (Jinja2, Ansible, Helm)
 
 -- promptmd: markdown that uses XML-style tag LINES ("<rules>", "</rules>")
@@ -110,6 +112,27 @@ end
 -- pattern, which (verified) does not fire for the compound filetype
 -- 'markdown.promptmd' at all, so there's no race to win there.
 vim.treesitter.language.register("promptmd", "markdown.promptmd")
+
+-- Detection above runs only when a file is OPENED. A buffer that starts as
+-- plain markdown (a new file, or prose) and grows tag sections later --
+-- typed with Mechanism A of lua/xml_surround.lua, wrapped with `sat`, or
+-- pasted -- would stay 'markdown', where an opening tag line begins an HTML
+-- block that swallows everything up to the next blank line: no heading, no
+-- emphasis highlights (verified: `:set ft=markdown.promptmd` fixed it at
+-- once). So re-run the scan at the moments structure can appear: leaving
+-- Insert mode and writing. The scan is a ≤500-line pass over the buffer,
+-- cheap enough for InsertLeave; a filetype change re-sources both ftplugins,
+-- which are idempotent. Only the plain->promptmd direction is taken.
+vim.api.nvim_create_autocmd({ "InsertLeave", "BufWritePost" }, {
+  group = vim.api.nvim_create_augroup("promptmd_redetect", { clear = true }),
+  callback = function(ev)
+    if vim.bo[ev.buf].filetype ~= "markdown" then return end
+    if has_promptmd_structure(ev.buf, PROMPTMD_SCAN_LIMIT) then
+      vim.bo[ev.buf].filetype = "markdown.promptmd"
+    end
+  end,
+  desc = "Promote a markdown buffer to markdown.promptmd once tag sections appear",
+})
 
 vim.filetype.add({
   extension = {

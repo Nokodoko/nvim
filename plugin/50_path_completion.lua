@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['50_path_completion']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '50_path_completion') then return end
 -- Auto-trigger file path completion when typing path patterns
 -- Detects: ./ ../ / ~/ and triggers <C-x><C-f> automatically
 

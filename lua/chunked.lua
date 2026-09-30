@@ -80,13 +80,22 @@ M.config = vim.tbl_extend('force', M.defaults, {})
 
 -- Groups link to standard diagnostic highlights so they follow the active
 -- colorscheme; `default = true` preserves any user override.
+--
+-- The stripe groups are applied via `line_hl_group`, which layers UNDER the
+-- syntax/treesitter highlights: any text with no highlight of its own takes
+-- the stripe group's foreground. So a stripe group must be background-only.
+-- ChunkOdd used to link to NonText (a dim fg, no bg): that painted every
+-- unhighlighted line of prose in the odd chunks -- in a plain .md buffer the
+-- whole file is chunk 1 -- in the colorscheme's "invisible" text colour.
+-- ColorColumn is bg-only in mini.hues (and in every colorscheme that follows
+-- the standard highlight semantics).
 local hl_spec = {
   ChunkBoundaryIdeal = { link = 'DiagnosticOk', default = true },
   ChunkBoundaryGood = { link = 'DiagnosticHint', default = true },
   ChunkOversized = { link = 'DiagnosticWarn', default = true },
   ChunkClip = { link = 'DiagnosticError', default = true },
   ChunkEven = { default = true },
-  ChunkOdd = { link = 'NonText', default = true },
+  ChunkOdd = { link = 'ColorColumn', default = true },
 }
 
 function M.define_highlights()

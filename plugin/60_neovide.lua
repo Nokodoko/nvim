@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['60_neovide']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '60_neovide') then return end
 -- ┌──────────────────────────┐
 -- │ Neovide GUI configuration │
 -- └──────────────────────────┘

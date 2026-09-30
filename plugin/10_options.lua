@@ -1,3 +1,5 @@
+-- bisect guard: nvim --cmd "let g:skip_plugins = ['10_options']" skips this file
+if vim.g.skip_plugins and vim.tbl_contains(vim.g.skip_plugins, '10_options') then return end
 -- ┌──────────────────────────┐
 -- │ Built-in Neovim behavior │
 -- └──────────────────────────┘
