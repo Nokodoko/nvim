@@ -640,11 +640,7 @@ later(function()
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
-  -- On `<C-l>` accept the completion popup item. It used to fall through to
-  -- accepting an inline AI suggestion (Copilot, then minuet); both are gone,
-  -- so `<C-l>` now only handles the popup and otherwise passes through as the
-  -- native insert-mode `<C-l>` (repeat last change), exactly as it did when no
-  -- suggestion was visible.
+  -- On `<C-l>` accept completion if pmenu visible, otherwise accept minuet suggestion
   local pmenu_select_accept = {
     condition = function()
       return vim.fn.pumvisible() == 1
@@ -657,7 +653,16 @@ later(function()
       return '<C-y>'
     end,
   }
-  MiniKeymap.map_multistep('i', '<C-l>', { pmenu_select_accept })
+  local minuet_step = {
+    condition = function()
+      local vt = package.loaded['minuet.virtualtext']
+      return vt and vt.action.is_visible()
+    end,
+    action = function()
+      require('minuet.virtualtext').action.accept()
+    end,
+  }
+  MiniKeymap.map_multistep('i', '<C-l>', { pmenu_select_accept, minuet_step })
   -- On `<BS>` just try to account for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<BS>', { 'minipairs_bs' })
 end)

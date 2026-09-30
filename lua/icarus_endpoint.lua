@@ -2,7 +2,7 @@
 -- is on RIGHT NOW. icarus's /swap and /fleet change which backend answers;
 -- icarus's liveness walk over routing.surface_defaults["web"] then moves its
 -- `default` (GET /provider) to the first pin that answers. Every editor
--- request resolves through here, so ChatGPT.nvim and claude_prompt
+-- request resolves through here, so minuet, ChatGPT.nvim and claude_prompt
 -- follow a swap on their next request -- no config rewrite, no nvim restart.
 --
 -- Resolution: GET /provider -> default {provider = model}; the provider must
@@ -123,12 +123,12 @@ end
 --- The live endpoint `{provider, model, base, key}`, or `fallback` (a table of
 --- the same shape) when icarus cannot be asked and nothing was resolved yet.
 ---
---- NEVER BLOCKS. This runs on synchronous request-construction paths
---- (claude_prompt/api.lua and ChatGPT.nvim's host/model commands resolve
---- inline before building the request), so a blocking fetch here freezes the
---- editor for the whole duration -- which is why a stale-but-instant answer
---- plus a background refresh beats a fresh answer here. A /swap is therefore
---- picked up within one TTL, not on the very next keypress.
+--- NEVER BLOCKS. This runs on minuet's synchronous `transform` path
+--- (minuet/backends/openai_base.lua applies transforms inline before building
+--- the curl args), so a blocking fetch here freezes the editor for the whole
+--- duration -- which is why a stale-but-instant answer plus a background
+--- refresh beats a fresh answer here. A /swap is therefore picked up within
+--- one TTL, not on the very next keypress.
 function M.resolve(fallback)
   local now = vim.uv.now() / 1000
   if cache.ep and now - cache.at < M.ttl_s then return cache.ep end

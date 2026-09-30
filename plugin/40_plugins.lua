@@ -320,18 +320,148 @@ later(function()
   require('mason').setup()
 end)
 
--- (minuet-ai.nvim inline completion removed 2026-09-29)
+-- minuet-ai.nvim (local inline completion) ==================================
+-- nvim-model:managed model=qwen3.8-flash-next host=monty:8085
 --
--- It was tried twice and both modes were worse than no completion:
---   - auto-trigger froze the UI ~5s per request (llama.cpp prompt eval blocked
---     redraws);
---   - the manual-trigger fallback (auto_trigger_ft = {}, <M-.> to request, see
---     b1ced84) still made the cursor and the text under it disappear, which is
---     not a trade worth making for suggestions.
--- The whole surface went with it, including the two support modules written
--- only to serve it (a curl-free vim.loop transport and a windowed buffer
--- context reader). :Icarus chat (ChatGPT.nvim, below) is unaffected and remains
--- the way to talk to the local model from the editor.
+-- Replaces GitHub Copilot with the Qwen3.8-Flash-Next llama.cpp server on
+-- `monty` -- the same weights the :Icarus chat and the icarus harness run, so
+-- completion, chat and the agents all reason over one model. copilot.lua could
+-- NOT be reused: its config surface (auth_provider_url / copilot_model /
+-- server.custom_server_filepath) has no inference-endpoint knob -- it always
+-- speaks GitHub's proprietary Copilot LSP protocol. minuet's
+-- `openai_compatible` provider takes a raw end_point, so it talks to llama.cpp
+-- directly.
+--
+-- Why :8085 (`llamacpp-monty-qwen1`) and not :8084 (`-qwen0`): both serve
+-- identical weights, but :8084 is icarus's default_provider AND its
+-- tool_model_pins "*", i.e. every agent turn and tool call queues there. An
+-- interactive completion should not sit behind that. :8085 only carries
+-- compaction (bursty, rare) and measured marginally faster. Flip the port if
+-- that ever inverts.
+--
+-- No subscription and no `:Copilot auth` step -- llama.cpp ignores the bearer
+-- token, so api_key returns a constant. (minuet treats a STRING api_key as an
+-- env-var *name* and a FUNCTION as the literal key -- see minuet/utils.lua
+-- get_api_key.)
+--
+-- Usage:
+-- - MANUAL TRIGGER ONLY (auto-trigger froze the UI ~5s per request):
+--   `<M-.>` / `<M-,>` in insert mode request a suggestion on demand
+-- - Suggestions appear as virtual text (grayed out) once requested
+-- - `<C-l>` - Accept suggestion (via MiniKeymap, see 30_mini.lua)
+-- - `<M-j>` - Accept one line
+-- - `<M-w>` - Accept N lines (prompts for N; minuet has no accept_word)
+-- - `<C-]>` - Dismiss suggestion
+-- - `<leader>uc` - toggle auto-trigger (no-op unless auto_trigger_ft set)
+-- - `<leader>uk` - open the keybind cheat sheet (see plugin/70_cheatsheet.lua)
+--
+-- See also:
+-- - `:h minuet` - Plugin documentation
+-- - `/nvim-model <model> <host>` - repoint this + ChatGPT.nvim at a new model
+later(function()
+  add('milanglacier/minuet-ai.nvim')
+
+  -- Filetypes where an inline suggestion is just noise. Everything else --
+  -- INCLUDING markdown -- is covered by the '*' auto_trigger_ft pattern below.
+  local minuet_ignore_ft = { 'gitcommit', 'gitrebase', 'help' }
+
+  require('minuet').setup({
+    provider = 'openai_compatible',
+    provider_options = {
+      openai_compatible = {
+        end_point = 'http://monty:8085/v1/chat/completions',
+        model = 'qwen3.8-flash-next',
+        name = 'monty',
+        -- Function form => used verbatim as the key. llama.cpp ignores it,
+        -- but minuet aborts the request when the key resolves to nil.
+        api_key = function() return 'local-no-auth' end,
+        stream = true,
+        optional = {
+          max_tokens = 256,
+          -- MANDATORY, not cosmetic. `optional` is tbl_deep_extend'd onto the
+          -- request body (minuet/backends/openai_base.lua), so this reaches
+          -- llama.cpp. Qwen3.8 thinks by default, and minuet's stream/no-stream
+          -- decoders read ONLY `.content` -- they never look at
+          -- `reasoning_content`. Measured on monty with a real 8.4k-token
+          -- buffer: thinking ON spent all 256 budget on reasoning, returned
+          -- content="" with finish_reason=length, i.e. completion silently
+          -- returns NOTHING. With enable_thinking=false the same request
+          -- answers in ~0.2s (warm). Spelling matters: this llama.cpp build
+          -- ignores the vLLM `thinking=false` form.
+          chat_template_kwargs = { enable_thinking = false },
+        },
+        -- Follow icarus's LIVE web model (lua/icarus_endpoint.lua): minuet runs
+        -- `transform` on every request, after `optional` is merged, so a
+        -- /swap or /fleet in icarus repoints completion on the next keypress.
+        -- The end_point/model above are only the fallback when icarus serve
+        -- cannot be asked.
+        transform = {
+          function(req)
+            local ep = require('icarus_endpoint').resolve({
+              model = 'qwen3.8-flash-next', base = 'http://monty:8085', key = 'local-no-auth',
+            })
+            req.end_point = ep.base .. '/v1/chat/completions'
+            req.headers['Authorization'] = 'Bearer ' .. ep.key
+            req.body.model = ep.model
+            req.body.chat_template_kwargs = require('icarus_endpoint').no_thinking
+            return req
+          end,
+        },
+      },
+    },
+
+    -- Latency budget, measured on monty:8085 (llama.cpp) 2026-09-20 with a
+    -- real 8.4k-token config buffer: ~2100 tok/s prompt eval, ~90-220 tok/s
+    -- generation, ~5.4s cold / ~0.2s warm end to end. (The previous cai:8090
+    -- endpoint measured ~10.4s for the identical prompt -- roughly 2x slower.)
+    --
+    -- request_timeout becomes curl `--max-time`. The 3s default killed EVERY
+    -- request on a real buffer: a 26k-char context is ~9900 prompt tokens and
+    -- needs ~9s end to end. Nothing streams until prompt eval completes (5.3s),
+    -- so a 3s cap produced zero tokens rather than a partial completion. Kept
+    -- at 30: cold prompt eval on a large buffer still lands in seconds, and the
+    -- timeout only has to cover the worst case, not the common one.
+    request_timeout = 30,
+    -- The chat backend encodes n_completions candidates into ONE response, so
+    -- the default of 3 costs ~3x the generation time. One keeps it responsive.
+    n_completions = 1,
+    -- Halved from the 16000 default to cut prompt eval roughly in half.
+    -- Split context_ratio 0.75 before the cursor / 0.25 after.
+    context_window = 8000,
+
+    virtualtext = {
+      -- Manual trigger only: auto-trigger caused ~5s UI freezes while the
+      -- llama.cpp prompt eval blocked redraws. Invoke with <M-]> (next) or
+      -- <M-[> (prev) in insert mode; manual invocation works in ANY filetype.
+      auto_trigger_ft = {},
+      auto_trigger_ignore_ft = minuet_ignore_ft,
+      -- mini.completion auto-triggers its popup constantly; at the default of
+      -- false the grey virtual text would be suppressed nearly all the time.
+      show_on_completion_menu = true,
+      keymap = {
+        accept = nil,               -- Handled by MiniKeymap with pmenu fallback
+        accept_line = '<M-j>',      -- Alt+j to accept line
+        accept_n_lines = '<M-w>',   -- Alt+w to accept N lines
+        next = '<M-.>',             -- Alt+. to request/cycle next suggestion
+        prev = '<M-,>',             -- Alt+, to request/cycle previous suggestion
+        dismiss = '<C-]>',          -- Ctrl+] to dismiss
+      },
+    },
+  })
+
+  -- Manual-trigger mode: no buffer arming. `action.next`/`action.prev` fire a
+  -- request on demand even when auto-trigger is off, in any filetype. Do NOT
+  -- set vim.b.minuet_virtual_text_auto_trigger here -- arming buffers is what
+  -- re-enabled auto-trigger and brought back the ~5s UI freezes (the leftover
+  -- arming loop from the auto-trigger era was removed for exactly that reason).
+
+  -- Fast path: replace minuet's per-request `curl` spawn (a synchronous
+  -- fork+exec on the UI loop: ~1.5 ms warm, 15-65 ms cold -- the pause felt
+  -- when a suggestion fires) with a pure vim.loop TCP client, and its
+  -- full-buffer context scan with a windowed read. See lua/icarus_minuet_fast.lua
+  -- for the measurements and the fallback semantics.
+  require('icarus_minuet_fast').apply()
+end)
 
 -- ChatGPT.nvim (Icarus chat) ===============================================
 -- nvim-model:managed model=qwen3.8-flash-next host=monty:8084
