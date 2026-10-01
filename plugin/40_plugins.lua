@@ -404,7 +404,9 @@ if vim.g.no_minuet ~= 1 then later(function()
             local ep = require('icarus_endpoint').resolve({
               model = 'qwen3.8-flash-next', base = 'http://monty:8085', key = 'local-no-auth',
             })
-            req.end_point = ep.base .. '/v1/chat/completions'
+            -- icarus defaults to qwen0 (:8084), the agent queue; same weights on qwen1 (:8085).
+            local base = ep.provider == 'llamacpp-monty-qwen0' and 'http://monty:8085' or ep.base
+            req.end_point = base .. '/v1/chat/completions'
             req.headers['Authorization'] = 'Bearer ' .. ep.key
             req.body.model = ep.model
             req.body.chat_template_kwargs = require('icarus_endpoint').no_thinking
@@ -426,6 +428,11 @@ if vim.g.no_minuet ~= 1 then later(function()
     -- at 30: cold prompt eval on a large buffer still lands in seconds, and the
     -- timeout only has to cover the worst case, not the common one.
     request_timeout = 30,
+    -- Silence per-request notices. minuet filters on ITS level, and a single
+    -- dropped/garbled stream is 'error' there (shown as vim INFO), so only
+    -- `false` stops the popups. Real outages: `:checkhealth minuet`
+    -- (lua/minuet/health.lua) probes the live endpoint.
+    notify = false,
     -- The chat backend encodes n_completions candidates into ONE response, so
     -- the default of 3 costs ~3x the generation time. One keeps it responsive.
     n_completions = 1,

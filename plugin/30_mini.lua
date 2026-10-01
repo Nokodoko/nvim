@@ -642,18 +642,17 @@ later(function()
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
-  -- On `<C-l>` accept completion if pmenu visible, otherwise accept minuet suggestion
-  local pmenu_select_accept = {
+  -- On `<C-l>`, first matching gate wins:
+  --   1. pmenu item navigated to (selected ~= -1)  -> accept that item
+  --   2. minuet suggestion visible                 -> accept minuet
+  --   3. pmenu visible, nothing navigated          -> accept first item
+  -- 'completeopt' has noselect, so selected == -1 means "not navigated".
+  -- minuet's accept closes an open pmenu itself (<C-e> before inserting).
+  local pmenu_navigated_accept = {
     condition = function()
-      return vim.fn.pumvisible() == 1
+      return vim.fn.pumvisible() == 1 and vim.fn.complete_info({ 'selected' }).selected ~= -1
     end,
-    action = function()
-      -- If nothing selected, select first item then accept; otherwise just accept
-      if vim.fn.complete_info({ 'selected' }).selected == -1 then
-        return '<C-n><C-y>'
-      end
-      return '<C-y>'
-    end,
+    action = function() return '<C-y>' end,
   }
   local minuet_step = {
     condition = function()
@@ -664,7 +663,11 @@ later(function()
       require('minuet.virtualtext').action.accept()
     end,
   }
-  MiniKeymap.map_multistep('i', '<C-l>', { pmenu_select_accept, minuet_step })
+  local pmenu_first_accept = {
+    condition = function() return vim.fn.pumvisible() == 1 end,
+    action = function() return '<C-n><C-y>' end,
+  }
+  MiniKeymap.map_multistep('i', '<C-l>', { pmenu_navigated_accept, minuet_step, pmenu_first_accept })
   -- On `<BS>` just try to account for pairs from 'mini.pairs'
   MiniKeymap.map_multistep('i', '<BS>', { 'minipairs_bs' })
 end)
