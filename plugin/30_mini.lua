@@ -250,6 +250,31 @@ later(function() require('mini.extra').setup() end)
 -- - `:h MiniAi-textobject-specification` - examples of custom textobjects
 later(function()
   local ai = require('mini.ai')
+
+  -- Tag textobject (`at`/`it`): mini.ai's builtin `t` is a plain-text pattern
+  -- search, and this config's global `search_method = 'cover'` restricts it to
+  -- a region strictly COVERING the cursor. So `dit`/`yit` on a line with no tag
+  -- pair silently do nothing -- the "it worked once and never again" symptom.
+  -- This function spec (same shape as `MiniAi.gen_spec.treesitter()`) keeps
+  -- the builtin pattern but forces 'cover_or_next' regardless of the global
+  -- setting, so from plain text it jumps forward into the next tag pair (like
+  -- `in`/`an` used to). Explicit `int`/`alt` still work: mini.ai passes the
+  -- requested search method in `opts` and we only override the global 'cover'.
+  --
+  -- Mechanism (verified against mini/ai.lua and by spike): mini.ai calls the
+  -- function spec as `spec(ai_type, id, opts)` BEFORE copying `opts`, and the
+  -- returned value is used as the textobject spec. So we mutate
+  -- `opts.search_method` in place and hand back the builtin tag pattern.
+  -- Returning a spec (not calling find_textobject ourselves) avoids recursion
+  -- into this same `t` entry and keeps mini.ai's "No textobject found"
+  -- message working for a genuine miss.
+  local tag_spec = { '<(%w-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' }
+
+  local function tag_textobject(_, _, opts)
+    if opts ~= nil and opts.search_method == 'cover' then opts.search_method = 'cover_or_next' end
+    return tag_spec
+  end
+
   ai.setup({
     -- 'mini.ai' can be extended with custom textobjects
     custom_textobjects = {
@@ -259,6 +284,9 @@ later(function()
       -- use tree-sitter. This example makes `aF`/`iF` mean around/inside function
       -- definition (not call). See `:h MiniAi.gen_spec.treesitter()` for details.
       F = ai.gen_spec.treesitter({ a = '@function.outer', i = '@function.inner' }),
+      -- Tag: builtin pattern, but searches forward when the cursor is not
+      -- inside a tag pair (see `tag_textobject` above). `at`/`it`/`alt`/`ilt`/`g[`/`g]`.
+      t = tag_textobject,
     },
 
     -- 'mini.ai' by default mostly mimics built-in search behavior: first try
@@ -267,6 +295,12 @@ later(function()
     -- always try to search only covering textobject and explicitly ask to search
     -- for next (`an`/`in`) or last (`al`/`il`).
     -- Try this. If you don't like it - delete next line and this comment.
+    --
+    -- 'cover' here means STRICTLY covering: `dit` on a line with no tag pair
+    -- does nothing (just a "No textobject found" message). The tag textobject
+    -- (`t`) opts out of the global setting via its own function spec (see
+    -- `tag_textobject` above) and searches 'cover_or_next', so `dit`/`cit`
+    -- from plain text jumps forward into the next tag like `in`/`an` used to.
     search_method = 'cover',
   })
 end)
