@@ -5,7 +5,7 @@
 -- no global mapping, no global mini.surround config -- so other filetypes see
 -- no behaviour change at all.
 --
--- Two mechanisms:
+-- Three mechanisms:
 --
 --   A. Typing the `>` that closes an OPENING tag explodes it into three lines
 --      with a matching closing tag, cursor parked on the indented middle line,
@@ -21,6 +21,16 @@
 --          # RULES
 --              selection
 --          </rules>
+--
+--   C. In ANY visual mode (char `v`, line `V`, block `Ctrl-V`), `<Right>` runs
+--      the `sat` tag wrap (Mechanism B). The binding is an `<expr>` mapping that
+--      feeds `sat` with `feedkeys(..., 'm')` -- 'm' remaps the fed keys so `sa`
+--      reaches mini.surround's operator. Feeding (rather than returning `sat`
+--      from the expr) is deliberate: an `<expr>` result is fed with noremap
+--      semantics, so a returned `sat` would reach the buffer as the literal
+--      characters `s`, `a`, `t` -- `s` running native visual substitute -- and
+--      never trigger mini.surround. The trade-off is that `<Right>` no longer
+--      extends a visual selection; use the motion keys (`h`/`l`, `j`/`k`) for that.
 --
 -- This config has no markup formatter and no markup LSP, so indentation is
 -- computed here (current line's indent + one 'shiftwidth') rather than delegated.
@@ -328,11 +338,34 @@ local function tag_output()
   return { left = '<>', right = '</>' }
 end
 
+-- Mechanism C: visual `<Right>` runs the `sat` tag wrap ======================
+
+--- `<expr>` body for the visual-mode `<Right>` binding. In EVERY visual mode
+--- (char `v`, line `V`, block `Ctrl-V`) it feeds the keys `sat` with
+--- `feedkeys(..., 'm')` -- 'm' REMAPS what is fed, so `sa` reaches mini.surround's
+--- operator and `t` selects our custom surrounding (Mechanism B). It must be 'm',
+--- not 'n': with 'n' the keys are fed literally, `s` runs native visual
+--- substitute (eating the selection) and `at` lands in the buffer as text.
+--- Returns '' so the mapping itself contributes nothing. The mapping is registered
+--- in 'x' mode only, so NORMAL/INSERT `<Right>` are untouched; feeding `sat`
+--- leaves visual mode, so this cannot recurse into itself.
+function M.right_arrow_wrap()
+  vim.api.nvim_feedkeys('sat', 'mt', false)
+  return ''
+end
+
 -- Wiring =====================================================================
 
---- Enable both mechanisms for the current buffer.
+--- Enable all three mechanisms for the current buffer.
 function M.setup_buffer()
   vim.keymap.set('i', '>', type_gt, { buffer = true, desc = 'Auto-close opening tag' })
+
+  -- Visual `<Right>` -> `sat` tag wrap (Mechanism C), in every visual mode.
+  vim.keymap.set('x', '<Right>', function() return M.right_arrow_wrap() end, {
+    buffer = true,
+    expr = true,
+    desc = 'Wrap selection in a tag (sat)',
+  })
 
   -- `vim.b` hands back a COPY, so mutating a nested field in place is silently
   -- lost. Read the whole table, mutate, reassign -- which also preserves any
