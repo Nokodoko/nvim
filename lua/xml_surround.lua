@@ -5,7 +5,7 @@
 -- no global mapping, no global mini.surround config -- so other filetypes see
 -- no behaviour change at all.
 --
--- Three mechanisms:
+-- Four mechanisms:
 --
 --   A. Typing the `>` that closes an OPENING tag explodes it into three lines
 --      with a matching closing tag, cursor parked on the indented middle line,
@@ -31,6 +31,14 @@
 --      characters `s`, `a`, `t` -- `s` running native visual substitute -- and
 --      never trigger mini.surround. The trade-off is that `<Right>` no longer
 --      extends a visual selection; use the motion keys (`h`/`l`, `j`/`k`) for that.
+--
+--   D. In ANY visual mode, `<Left>` wraps the selected LINES in YAML frontmatter:
+--      a `---` fence one line above the first selected line and one below the
+--      last. Implemented directly (no mini.surround) from `getpos('v')`/`getpos('.')`
+--      -- the `'<`/`'>` marks are unset while a selection is live -- so it is
+--      identical for char/line/block selection: the fence always surrounds whole
+--      lines. The edits are deferred with `vim.schedule` because the `<expr>`
+--      body runs under textlock. `<Left>` no longer extends a visual selection.
 --
 -- This config has no markup formatter and no markup LSP, so indentation is
 -- computed here (current line's indent + one 'shiftwidth') rather than delegated.
@@ -354,9 +362,45 @@ function M.right_arrow_wrap()
   return ''
 end
 
+-- Mechanism D: visual `<Left>` wraps the selection in YAML frontmatter ========
+
+--- `<expr>` body for the visual-mode `<Left>` binding. Wraps the selected LINES
+--- in YAML frontmatter: a `---` fence one line above the first selected line and
+--- one below the last. Works identically for char/line/block selection because
+--- it fences whole LINES, not columns.
+---
+--- Two constraints shape the implementation:
+---   1. The `'<`/`'>` marks are only updated when visual mode ENDS, but this runs
+---      from an <expr> mapping while the selection is still live, so they read
+---      {0,0}. getpos('v') (anchor) and getpos('.') (cursor) ARE valid
+---      mid-selection and return {bufnum, row, col, off} with a 1-based row.
+---   2. An <expr> mapping body runs under TEXTLOCK -- nvim_buf_set_lines raises
+---      E565 there (same restriction Mechanism A documents). So the rows are
+---      captured here (getpos is read-only and allowed) and the actual edits are
+---      deferred with vim.schedule, which runs after the expr returns and the
+---      lock is released.
+--- Returns '' so the mapping contributes nothing and visual mode simply ends.
+--- Registered in 'x' mode only, so NORMAL/INSERT `<Left>` are untouched.
+function M.frontmatter_wrap()
+  local buf = vim.api.nvim_get_current_buf()
+  local anchor = vim.fn.getpos('v')
+  local cursor = vim.fn.getpos('.')
+  -- Rows are 1-based; 0 means unset -- do nothing rather than corrupt.
+  if anchor[2] < 1 or cursor[2] < 1 then return '' end
+  local first = math.min(anchor[2], cursor[2])
+  local last = math.max(anchor[2], cursor[2])
+  -- Defer the edits out of the textlocked expr body. Insert the LOWER fence
+  -- first so the upper insert's index stays valid.
+  vim.schedule(function()
+    vim.api.nvim_buf_set_lines(buf, last, last, false, { '---' })
+    vim.api.nvim_buf_set_lines(buf, first - 1, first - 1, false, { '---' })
+  end)
+  return ''
+end
+
 -- Wiring =====================================================================
 
---- Enable all three mechanisms for the current buffer.
+--- Enable all four mechanisms for the current buffer.
 function M.setup_buffer()
   vim.keymap.set('i', '>', type_gt, { buffer = true, desc = 'Auto-close opening tag' })
 
@@ -365,6 +409,13 @@ function M.setup_buffer()
     buffer = true,
     expr = true,
     desc = 'Wrap selection in a tag (sat)',
+  })
+
+  -- Visual `<Left>` -> YAML frontmatter wrap (Mechanism D), in every visual mode.
+  vim.keymap.set('x', '<Left>', function() return M.frontmatter_wrap() end, {
+    buffer = true,
+    expr = true,
+    desc = 'Wrap selection in YAML frontmatter (---)',
   })
 
   -- `vim.b` hands back a COPY, so mutating a nested field in place is silently

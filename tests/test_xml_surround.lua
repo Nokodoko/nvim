@@ -144,5 +144,76 @@ check('<Right> in NORMAL mode is untouched by the binding', function()
   if col ~= 2 then error('normal-mode <Right> did not move natively, col=' .. col) end
 end)
 
+-- Mechanism D: `<Left>` in ANY visual mode wraps the selected lines in YAML
+-- frontmatter (`---` one line above the first and one below the last). Driven
+-- with a real mapped `<Left>` keypress (feedkeys 'tx'), same as Mechanism C.
+
+check('setup_buffer installs an x-mode <expr> <Left> mapping', function()
+  local buf = markdown_buf({ 'text' })
+  local found
+  for _, m in ipairs(vim.api.nvim_buf_get_keymap(buf, 'x')) do
+    if m.lhs == '<Left>' then found = m end
+  end
+  if not found then error('no x-mode <Left> mapping installed') end
+  if found.expr ~= 1 then error('<Left> mapping is not <expr>') end
+end)
+
+--- Select with `select_keys` from (row,col), press a real `<Left>`, return lines.
+--- The wrap is applied from a `vim.schedule` callback (the <expr> body runs under
+--- textlock and cannot edit the buffer directly), so waiting for visual mode to
+--- end is NOT enough -- the edit lands a beat later. Wait for the two `---` fence
+--- lines to actually appear (line count 4 -> 6) instead.
+local function left_arrow_frontmatter(select_keys, row, col)
+  local buf = markdown_buf({ 'title line', 'body one', 'body two', 'tail line' })
+  vim.api.nvim_win_set_cursor(0, { row, col })
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(select_keys .. '<Left>', true, false, true), 'tx', false)
+  vim.wait(500, function() return vim.api.nvim_buf_line_count(buf) == 6 end)
+  return vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+end
+
+check('<Left> in visual-LINE fences the selected lines', function()
+  eq(left_arrow_frontmatter('Vj', 2, 0), {
+    'title line',
+    '---',
+    'body one',
+    'body two',
+    '---',
+    'tail line',
+  })
+end)
+
+check('<Left> in visual-CHAR fences the whole lines the selection touches', function()
+  eq(left_arrow_frontmatter('vj$', 2, 0), {
+    'title line',
+    '---',
+    'body one',
+    'body two',
+    '---',
+    'tail line',
+  })
+end)
+
+check('<Left> on a single line fences just that line', function()
+  eq(left_arrow_frontmatter('V', 3, 0), {
+    'title line',
+    'body one',
+    '---',
+    'body two',
+    '---',
+    'tail line',
+  })
+end)
+
+check('<Left> in NORMAL mode is untouched by the binding', function()
+  local buf = markdown_buf({ 'hello world' })
+  vim.api.nvim_win_set_cursor(0, { 1, 4 })
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Left><Left>', true, false, true), 'tx', false)
+  vim.wait(500, function() return vim.api.nvim_win_get_cursor(0)[2] == 2 end)
+  local col = vim.api.nvim_win_get_cursor(0)[2]
+  if col ~= 2 then error('normal-mode <Left> did not move natively, col=' .. col) end
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  if lines[1] == '---' then error('normal-mode <Left> wrongly inserted frontmatter') end
+end)
+
 print(string.format('\n%d passed, %d failed', passed, failed))
 if failed > 0 then vim.cmd('cq 1') end
